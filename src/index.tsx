@@ -181,16 +181,30 @@ app.get('/api/step5/appropriateness', (c) => {
   })
 })
 
-// Step 6: 메일 발송 현황
+// Step 6: 메일 발송 현황 - PRD v2: 협력사별 상세 데이터 포함
 app.get('/api/step6/email-status', (c) => {
   const suppliers = [...new Set(poData.map(item => item.발주업체명))]
   
-  const emailStatus = suppliers.map((supplier, index) => ({
-    supplier,
-    itemCount: poData.filter(item => item.발주업체명 === supplier).length,
-    status: index < 17 ? 'sent' : index < 22 ? 'pending' : 'failed',
-    sentAt: index < 17 ? '2025-01-28 09:30:00' : null
-  }))
+  const emailStatus = suppliers.map((supplier, index) => {
+    // 해당 협력사의 발주 항목들
+    const supplierItems = poData.filter(item => item.발주업체명 === supplier)
+    
+    return {
+      supplier,
+      itemCount: supplierItems.length,
+      status: 'sent', // 데모: 전체 발송 완료
+      sentAt: '2025-01-28 09:30:00',
+      // 협력사별 발주 현황 (메일 미리보기용)
+      items: supplierItems.map(item => ({
+        poNumber: item.구매오더,
+        ship: item.호선,
+        contractDate: item.계약납기일,
+        currentDate: item['2549주입고예정일'] || item['2548주입고예정일'] || item['2547주입고예정일'] || null,
+        materialNumber: item.자재번호,
+        materialName: item.자재내역
+      }))
+    }
+  })
   
   return c.json({
     data: emailStatus,

@@ -1789,11 +1789,141 @@ function filterByStatus(stepIndex, status) {
 }
 
 function toggleEmailPreview() {
-  showToast('info', '메일 미리보기', '전체 메일 내용은 발송 전 확인 가능합니다.');
+  showToast('info', '메일 미리보기', '협력사별 미리보기 버튼을 클릭하세요.');
 }
 
-function showEmailDetail(supplier) {
-  showToast('info', `${supplier} 메일 확인`, '발송된 메일 내용을 확인합니다.');
+// 협력사별 메일 미리보기 모달
+async function showEmailDetail(supplier) {
+  // API에서 직접 데이터를 가져옴 (state에 없을 수 있으므로)
+  let supplierData = null;
+  
+  // 먼저 state에서 찾기
+  const step6Data = state.stepData[5];
+  if (step6Data && step6Data.data) {
+    supplierData = step6Data.data.find(d => d.supplier === supplier);
+  }
+  
+  // state에 없으면 API에서 가져오기
+  if (!supplierData) {
+    try {
+      showToast('info', '로딩 중', '협력사 데이터를 불러오는 중...');
+      const response = await fetch('/api/step6/email-status');
+      const apiData = await response.json();
+      if (apiData && apiData.data) {
+        supplierData = apiData.data.find(d => d.supplier === supplier);
+        // state에도 저장
+        state.stepData[5] = apiData;
+      }
+    } catch (error) {
+      console.error('Failed to fetch email status:', error);
+    }
+  }
+  
+  if (!supplierData) {
+    showToast('warning', '협력사 없음', `${supplier} 데이터를 찾을 수 없습니다.`);
+    return;
+  }
+  
+  // 현재 주차 계산
+  const now = new Date();
+  const weekNumber = Math.ceil((now.getDate() + new Date(now.getFullYear(), now.getMonth(), 1).getDay()) / 7);
+  const year = now.getFullYear();
+  
+  // 금요일 계산
+  const friday = new Date(now);
+  friday.setDate(now.getDate() + (5 - now.getDay()));
+  const fridayStr = `${friday.getMonth() + 1}월 ${friday.getDate()}일 (금)`;
+  
+  const modal = document.getElementById('alert-modal');
+  modal.classList.remove('hidden');
+  modal.innerHTML = `
+    <div class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-4 border-b bg-blue-50 flex justify-between items-center">
+          <h3 class="text-lg font-semibold flex items-center gap-2">
+            <i class="fas fa-envelope text-blue-500"></i>
+            ${supplier} 메일 미리보기
+          </h3>
+          <button onclick="closeEmailModal()" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        <div class="p-5">
+          <div class="bg-gray-50 border rounded-lg p-5 font-mono text-sm">
+            <p class="text-gray-600 mb-4">
+              <strong>제목:</strong> [한화오션] 주간 납기 예정일 업데이트 요청 (${year}년 ${weekNumber}주차)
+            </p>
+            <hr class="my-4">
+            <p class="mb-3">안녕하세요, <span class="text-blue-600 font-bold">${supplier}</span> 담당자님.</p>
+            <p class="mb-3">한화오션 SCM팀입니다.</p>
+            <p class="mb-4">아래 발주 건에 대한 납기 예정일 업데이트를 요청드립니다.<br>첨부된 양식에 최신 납기 예정일을 기입하여 회신 부탁드립니다.</p>
+            
+            <div class="bg-blue-50 rounded-lg p-4 mb-4">
+              <p class="font-bold text-blue-800 mb-2">■ 요청 사항</p>
+              <ul class="text-blue-700 space-y-1">
+                <li>• 대상: 귀사 발주 건 전체 (<span class="font-bold">${supplierData.itemCount}건</span>)</li>
+                <li>• 요청 내용: 납기 예정일 업데이트</li>
+                <li>• 회신 기한: <span class="font-bold text-red-600">${fridayStr}</span></li>
+              </ul>
+            </div>
+            
+            <div class="bg-gray-100 rounded-lg p-4 mb-4">
+              <p class="font-bold text-gray-800 mb-2">■ 발주 현황 요약</p>
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs border-collapse">
+                  <thead>
+                    <tr class="border-b bg-gray-200">
+                      <th class="text-left py-2 px-2">PO 번호</th>
+                      <th class="text-left py-2 px-2">호선</th>
+                      <th class="text-left py-2 px-2">계약납기일</th>
+                      <th class="text-left py-2 px-2">현재예정일</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${supplierData.items ? supplierData.items.slice(0, 5).map(item => `
+                      <tr class="border-b">
+                        <td class="py-1 px-2">${item.poNumber}</td>
+                        <td class="py-1 px-2">${item.ship}</td>
+                        <td class="py-1 px-2">${item.contractDate || '-'}</td>
+                        <td class="py-1 px-2">${item.currentDate || '-'}</td>
+                      </tr>
+                    `).join('') : '<tr><td colspan="4" class="py-2 text-center text-gray-500">데이터 없음</td></tr>'}
+                    ${supplierData.items && supplierData.items.length > 5 ? `
+                      <tr><td class="py-1 px-2 text-gray-500" colspan="4">... 외 ${supplierData.items.length - 5}건</td></tr>
+                    ` : ''}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <p class="text-sm text-gray-600 mb-3">※ 납기 변동이 예상되는 경우, 사유와 함께 회신 부탁드립니다.</p>
+            <p class="mb-1">감사합니다.</p>
+            <p class="font-bold">한화오션 SCM팀</p>
+            
+            <div class="mt-4 p-3 bg-yellow-50 rounded border border-yellow-200">
+              <p class="text-yellow-700 text-xs">
+                <i class="fas fa-paperclip mr-1"></i>
+                첨부: 납기예정일_회신양식_${supplier}.xlsx
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="p-4 bg-gray-50 border-t flex gap-2 justify-end">
+          <button onclick="closeEmailModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm">
+            닫기
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function closeEmailModal() {
+  const modal = document.getElementById('alert-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.innerHTML = '';
+  }
 }
 
 // Main render function

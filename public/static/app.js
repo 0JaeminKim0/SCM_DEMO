@@ -1251,69 +1251,6 @@ function renderStep6(data) {
         </div>
       </div>
       
-      <!-- 메일 본문 미리보기 -->
-      <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-        <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
-          <h3 class="font-semibold text-gray-700">
-            <i class="fas fa-eye mr-2 text-purple-500"></i>
-            메일 본문 미리보기
-          </h3>
-          <button onclick="toggleEmailPreview()" class="px-3 py-1.5 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200">
-            <i class="fas fa-expand mr-1"></i>전체 보기
-          </button>
-        </div>
-        <div class="p-5 bg-gray-50 font-mono text-sm">
-          <div class="bg-white border rounded-lg p-5 shadow-inner">
-            <p class="text-gray-600 mb-4">
-              <strong>제목:</strong> [한화오션] 주간 납기 예정일 업데이트 요청 (${year}년 ${weekNumber}주차)
-            </p>
-            <hr class="my-4">
-            <p class="mb-3">안녕하세요, <span class="text-blue-600 font-bold">{협력사명}</span> 담당자님.</p>
-            <p class="mb-3">한화오션 SCM팀입니다.</p>
-            <p class="mb-4">아래 발주 건에 대한 납기 예정일 업데이트를 요청드립니다.<br>첨부된 양식에 최신 납기 예정일을 기입하여 회신 부탁드립니다.</p>
-            
-            <div class="bg-blue-50 rounded-lg p-4 mb-4">
-              <p class="font-bold text-blue-800 mb-2">■ 요청 사항</p>
-              <ul class="text-blue-700 space-y-1">
-                <li>• 대상: 귀사 발주 건 전체 (<span class="font-bold">{N}건</span>)</li>
-                <li>• 요청 내용: 납기 예정일 업데이트</li>
-                <li>• 회신 기한: <span class="font-bold text-red-600">${fridayStr}</span></li>
-              </ul>
-            </div>
-            
-            <div class="bg-gray-100 rounded-lg p-4 mb-4">
-              <p class="font-bold text-gray-800 mb-2">■ 발주 현황 요약</p>
-              <table class="w-full text-xs border-collapse">
-                <thead>
-                  <tr class="border-b">
-                    <th class="text-left py-2">PO 번호</th>
-                    <th class="text-left py-2">호선</th>
-                    <th class="text-left py-2">계약납기일</th>
-                    <th class="text-left py-2">현재예정일</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="border-b"><td class="py-1">4003XXXXXX</td><td>2579</td><td>2025-02-01</td><td>2025-01-28</td></tr>
-                  <tr class="border-b"><td class="py-1">4003XXXXXX</td><td>2580</td><td>2025-02-15</td><td>-</td></tr>
-                  <tr><td class="py-1 text-gray-500" colspan="4">...</td></tr>
-                </tbody>
-              </table>
-            </div>
-            
-            <p class="text-sm text-gray-600 mb-3">※ 납기 변동이 예상되는 경우, 사유와 함께 회신 부탁드립니다.</p>
-            <p class="mb-1">감사합니다.</p>
-            <p class="font-bold">한화오션 SCM팀</p>
-            
-            <div class="mt-4 p-3 bg-yellow-50 rounded border border-yellow-200">
-              <p class="text-yellow-700 text-xs">
-                <i class="fas fa-paperclip mr-1"></i>
-                첨부: 납기예정일_회신양식_{협력사명}.xlsx
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-      
       <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div class="p-4 bg-gray-50 border-b">
           <h3 class="font-semibold text-gray-700">
@@ -1786,10 +1723,6 @@ function filterByStatus(stepIndex, status) {
       row.style.display = row.dataset.status === status ? '' : 'none';
     }
   }
-}
-
-function toggleEmailPreview() {
-  showToast('info', '메일 미리보기', '협력사별 미리보기 버튼을 클릭하세요.');
 }
 
 // 협력사별 메일 미리보기 모달

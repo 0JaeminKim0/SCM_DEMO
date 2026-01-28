@@ -1495,26 +1495,18 @@ function renderStep8(data) {
         </h2>
       </div>
       
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
-          <p class="text-blue-100 text-sm">총 항목</p>
-          <p class="text-3xl font-bold mt-1">${summary.totalItems}</p>
-        </div>
-        <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-5 text-white">
-          <p class="text-red-100 text-sm">지연</p>
-          <p class="text-3xl font-bold mt-1">${summary.delayed}</p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
+          <p class="text-green-100 text-sm">🟢 납기 양호</p>
+          <p class="text-3xl font-bold mt-1">${summary.totalItems - summary.delayed - summary.caution}</p>
         </div>
         <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl p-5 text-white">
-          <p class="text-yellow-100 text-sm">주의</p>
+          <p class="text-yellow-100 text-sm">🟡 주의 요망</p>
           <p class="text-3xl font-bold mt-1">${summary.caution}</p>
         </div>
-        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white">
-          <p class="text-purple-100 text-sm">결품</p>
-          <p class="text-3xl font-bold mt-1">${summary.shortage}</p>
-        </div>
-        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-5 text-white">
-          <p class="text-orange-100 text-sm">일정 변동</p>
-          <p class="text-3xl font-bold mt-1">${summary.withScheduleChanges}</p>
+        <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-5 text-white">
+          <p class="text-red-100 text-sm">🔴 지연 예상</p>
+          <p class="text-3xl font-bold mt-1">${summary.delayed}</p>
         </div>
       </div>
       

@@ -1509,18 +1509,25 @@ function renderStep8(data) {
         </h2>
       </div>
       
+      <!-- 상단 요약: 5.2 적정성 판단 기준 (3차 납기예정일 vs 보급요청일) -->
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-2">
+        <p class="text-sm text-blue-700"><i class="fas fa-info-circle mr-1"></i> 아래 요약은 <strong>3차 납기예정일 vs 보급요청일</strong> 비교 결과입니다. (5.2 기준)</p>
+      </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
           <p class="text-green-100 text-sm">🟢 납기 양호</p>
-          <p class="text-3xl font-bold mt-1">${summary.totalItems - summary.delayed - summary.caution}</p>
+          <p class="text-3xl font-bold mt-1">${goodCount}</p>
+          <p class="text-green-200 text-xs mt-1">보급요청일보다 2일 이상 빠름</p>
         </div>
         <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl p-5 text-white">
           <p class="text-yellow-100 text-sm">🟡 주의 요망</p>
-          <p class="text-3xl font-bold mt-1">${summary.caution}</p>
+          <p class="text-3xl font-bold mt-1">${cautionCount}</p>
+          <p class="text-yellow-200 text-xs mt-1">보급요청일과 0~2일 차이</p>
         </div>
         <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-5 text-white">
           <p class="text-red-100 text-sm">🔴 지연 예상</p>
-          <p class="text-3xl font-bold mt-1">${summary.delayed}</p>
+          <p class="text-3xl font-bold mt-1">${delayCount}</p>
+          <p class="text-red-200 text-xs mt-1">보급요청일보다 느림</p>
         </div>
       </div>
       
@@ -1536,25 +1543,33 @@ function renderStep8(data) {
         </div>
         <div class="p-4">
           <div class="grid grid-cols-3 gap-4 mb-4">
-            <div class="text-center p-3 bg-red-50 rounded-lg">
-              <p class="text-red-600 text-sm">📈 지연</p>
+            <div class="text-center p-3 bg-red-50 rounded-lg border border-red-200">
+              <p class="text-red-600 text-sm font-medium">📈 지연</p>
               <p class="text-2xl font-bold text-red-700">${delayedCount}건</p>
+              <p class="text-xs text-red-500">1차 대비 일정 늦춰짐</p>
             </div>
-            <div class="text-center p-3 bg-green-50 rounded-lg">
-              <p class="text-green-600 text-sm">📉 단축</p>
+            <div class="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+              <p class="text-green-600 text-sm font-medium">📉 단축</p>
               <p class="text-2xl font-bold text-green-700">${shortenedCount}건</p>
+              <p class="text-xs text-green-500">1차 대비 일정 앞당겨짐</p>
             </div>
-            <div class="text-center p-3 bg-gray-50 rounded-lg">
-              <p class="text-gray-600 text-sm">➡️ 변동없음</p>
+            <div class="text-center p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <p class="text-gray-600 text-sm font-medium">➡️ 변동없음</p>
               <p class="text-2xl font-bold text-gray-700">${unchangedCount}건</p>
+              <p class="text-xs text-gray-500">1차와 동일</p>
             </div>
           </div>
           
-          <div class="overflow-x-auto max-h-64 scrollbar-thin">
+          <p class="text-sm text-gray-600 mb-3 bg-gray-50 p-2 rounded">
+            📊 총 <strong>${scheduleChanges.length}건</strong> 중 변동 발생 <strong>${delayedCount + shortenedCount}건</strong> (${Math.round((delayedCount + shortenedCount) / scheduleChanges.length * 100)}%) | 지연 ${delayedCount}건, 단축 ${shortenedCount}건, 변동없음 ${unchangedCount}건
+          </p>
+          
+          <div class="overflow-x-auto max-h-80 scrollbar-thin border rounded-lg">
             <table class="w-full text-sm">
               <thead class="bg-gray-100 sticky top-0">
                 <tr>
                   <th class="px-3 py-2 text-left font-medium text-gray-600">자재번호</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-600">협력사</th>
                   <th class="px-3 py-2 text-left font-medium text-gray-600">1차(2547)</th>
                   <th class="px-3 py-2 text-left font-medium text-gray-600">2차(2548)</th>
                   <th class="px-3 py-2 text-left font-medium text-gray-600">3차(2549)</th>
@@ -1562,9 +1577,10 @@ function renderStep8(data) {
                 </tr>
               </thead>
               <tbody>
-                ${scheduleChanges.slice(0, 10).map(item => `
-                  <tr class="border-b hover:bg-blue-50">
+                ${scheduleChanges.map(item => `
+                  <tr class="border-b hover:bg-blue-50 ${item.daysDiff > 0 ? 'bg-red-50' : item.daysDiff < 0 ? 'bg-green-50' : ''}">
                     <td class="px-3 py-2 font-mono text-xs">${item['자재번호']}</td>
+                    <td class="px-3 py-2 text-xs">${item['발주업체명']}</td>
                     <td class="px-3 py-2">${formatDate(item['2547주입고예정일'])}</td>
                     <td class="px-3 py-2">${formatDate(item['2548주입고예정일'])}</td>
                     <td class="px-3 py-2">${formatDate(item['2549주입고예정일'])}</td>
@@ -1576,9 +1592,6 @@ function renderStep8(data) {
               </tbody>
             </table>
           </div>
-          <p class="text-sm text-gray-500 mt-3 text-center">
-            요약: 총 ${summary.totalItems}건 중 일정 변동 ${scheduleChanges.length}건 (${Math.round(scheduleChanges.length / summary.totalItems * 100)}%)
-          </p>
         </div>
       </div>
       
@@ -1590,6 +1603,7 @@ function renderStep8(data) {
             <i class="fas fa-balance-scale mr-2 text-purple-500"></i>
             납기 적정성 판단 (3차 납기예정일 vs 보급요청일)
           </h3>
+          <p class="text-sm text-gray-500 mt-1">보급요청일 대비 납기예정일 충족 여부 판단</p>
         </div>
         <div class="p-4">
           <div class="bg-gray-50 rounded-lg p-4 mb-4">
@@ -1597,57 +1611,40 @@ function renderStep8(data) {
             <div class="grid grid-cols-3 gap-3 text-sm">
               <div class="bg-green-100 rounded p-2 text-center">
                 <span class="text-green-700 font-bold">🟢 양호</span>
-                <p class="text-xs text-green-600 mt-1">3차 예정일이 보급요청일보다 2일 이상 빠름</p>
+                <p class="text-xs text-green-600 mt-1">보급요청일 - 3차예정일 > 2일</p>
               </div>
               <div class="bg-yellow-100 rounded p-2 text-center">
                 <span class="text-yellow-700 font-bold">🟡 주의</span>
-                <p class="text-xs text-yellow-600 mt-1">3차 예정일이 보급요청일과 같거나 2일 이내 빠름</p>
+                <p class="text-xs text-yellow-600 mt-1">0일 ≤ 차이 ≤ 2일</p>
               </div>
               <div class="bg-red-100 rounded p-2 text-center">
                 <span class="text-red-700 font-bold">🔴 지연</span>
-                <p class="text-xs text-red-600 mt-1">3차 예정일이 보급요청일보다 느림</p>
+                <p class="text-xs text-red-600 mt-1">보급요청일 - 3차예정일 < 0일</p>
               </div>
             </div>
           </div>
           
-          <!-- 적정성 분포 차트 -->
-          <div class="bg-white border rounded-lg p-4 mb-4">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-sm font-medium text-gray-700">분석 결과 분포</span>
-            </div>
-            <div class="flex h-8 rounded-full overflow-hidden">
-              <div class="bg-green-500 flex items-center justify-center text-white text-xs font-bold" style="width: ${goodCount/totalAppropriateness*100}%">
-                ${goodCount}건
-              </div>
-              <div class="bg-yellow-500 flex items-center justify-center text-white text-xs font-bold" style="width: ${cautionCount/totalAppropriateness*100}%">
-                ${cautionCount}건
-              </div>
-              <div class="bg-red-500 flex items-center justify-center text-white text-xs font-bold" style="width: ${delayCount/totalAppropriateness*100}%">
-                ${delayCount}건
-              </div>
-            </div>
-            <div class="flex justify-between text-xs mt-2 text-gray-500">
-              <span>🟢 양호 ${goodCount}건 (${Math.round(goodCount/totalAppropriateness*100)}%)</span>
-              <span>🟡 주의 ${cautionCount}건 (${Math.round(cautionCount/totalAppropriateness*100)}%)</span>
-              <span>🔴 지연 ${delayCount}건 (${Math.round(delayCount/totalAppropriateness*100)}%)</span>
-            </div>
-          </div>
+          <p class="text-sm text-gray-600 mb-3 bg-gray-50 p-2 rounded">
+            📊 총 <strong>${appropriatenessData.length}건</strong> 분석 | 🟢 양호 ${goodCount}건 (${Math.round(goodCount/totalAppropriateness*100)}%) | 🟡 주의 ${cautionCount}건 (${Math.round(cautionCount/totalAppropriateness*100)}%) | 🔴 지연 ${delayCount}건 (${Math.round(delayCount/totalAppropriateness*100)}%)
+          </p>
           
-          <div class="overflow-x-auto max-h-64 scrollbar-thin">
+          <div class="overflow-x-auto max-h-80 scrollbar-thin border rounded-lg">
             <table class="w-full text-sm">
               <thead class="bg-gray-100 sticky top-0">
                 <tr>
                   <th class="px-3 py-2 text-left font-medium text-gray-600">자재번호</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-600">협력사</th>
                   <th class="px-3 py-2 text-left font-medium text-gray-600">3차예정일</th>
                   <th class="px-3 py-2 text-left font-medium text-gray-600">보급요청일</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-600">차이</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-600">차이(일)</th>
                   <th class="px-3 py-2 text-left font-medium text-gray-600">상태</th>
                 </tr>
               </thead>
               <tbody>
-                ${appropriatenessData.sort((a, b) => a.daysDiff - b.daysDiff).slice(0, 10).map(item => `
-                  <tr class="border-b hover:bg-blue-50">
+                ${appropriatenessData.sort((a, b) => a.daysDiff - b.daysDiff).map(item => `
+                  <tr class="border-b hover:bg-blue-50 ${item.status === 'danger' ? 'bg-red-50' : item.status === 'warning' ? 'bg-yellow-50' : ''}">
                     <td class="px-3 py-2 font-mono text-xs">${item['자재번호']}</td>
+                    <td class="px-3 py-2 text-xs">${item['발주업체명']}</td>
                     <td class="px-3 py-2">${formatDate(item['2549주입고예정일'])}</td>
                     <td class="px-3 py-2">${formatDate(item['보급요청일'])}</td>
                     <td class="px-3 py-2 ${item.daysDiff < 0 ? 'text-red-600 font-bold' : item.daysDiff <= 2 ? 'text-yellow-600' : 'text-green-600'}">

@@ -1696,11 +1696,7 @@ function renderStep8(data) {
       </div>
       ` : ''}
       
-      <div class="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-        <i class="fas fa-check-circle text-5xl text-green-500 mb-4"></i>
-        <p class="text-xl font-bold text-green-700">모든 프로세스 분석 완료</p>
-        <p class="text-sm text-green-600 mt-2">AI Agent가 납기 관리 분석을 성공적으로 완료했습니다.</p>
-      </div>
+
     </div>
   `;
 }

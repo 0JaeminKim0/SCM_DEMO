@@ -1,5 +1,42 @@
 export interface POData {
-  [key: string]: string | number | null;
+  구분: string;
+  발주업체명: string;
+  호선: number;
+  구매오더: number;
+  구매항목: number;
+  자재번호: string;
+  자재내역: string;
+  'LEAD TIME': number;
+  발주일: string;
+  PND: string;
+  '변경된 PND': string | null;
+  'PND 변경': string | null;
+  계약납기일: string | null;
+  보급요청신청일: string | null;
+  보급요청일: string | null;
+  자재구분: string | null;
+  Block: number | null;
+  Stage: string | null;
+  작업업체: string | null;
+  상세자재PND: string | null;
+  작업부서명: string | null;
+  요청자명: string | null;
+  연락처: string | null;
+  발주구매그룹명: string | null;
+  '2547주입고예정일': string | null;
+  진행현황: string | null;
+  '2548주입고예정일': string | null;
+  진행현황2: string | null;
+  '2549주입고예정일': string | null;
+  진행현황3: string | null;
+  비고: string | null;
+  지연구분: string | null;
+  결품구분: string | null;
+  원소재: string | null;
+  가공: string | null;
+  조립: string | null;
+  도장: string | null;
+  검사: string | null;
 }
 
 export const poData: POData[] = 

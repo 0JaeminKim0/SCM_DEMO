@@ -3,28 +3,35 @@ node_modules/
 
 # Build output
 dist/
-.wrangler/
 
-# Environment files
+# Environment variables
 .env
-.dev.vars
-
-# PM2
-.pm2/
-pids/
-logs/
-*.log
+.env.local
+.env.*.local
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Backup files
-*.backup
-*.bak
-*.tar.gz
-*.zip
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Test coverage
+coverage/
+
+# PM2
+.pm2/
+ecosystem.config.cjs

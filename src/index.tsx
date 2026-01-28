@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { poData } from './data'
+import { poData } from './data.js'
 
 const app = new Hono()
 
@@ -23,12 +23,15 @@ app.get('/api/step1/po-extract', (c) => {
   
   poData.forEach(item => {
     // 구분별 건수
-    summary.byCategory[item.구분] = (summary.byCategory[item.구분] || 0) + 1
+    const category = item.구분 as string
+    summary.byCategory[category] = (summary.byCategory[category] || 0) + 1
     // 공급사별 건수
-    summary.bySupplier[item.발주업체명] = (summary.bySupplier[item.발주업체명] || 0) + 1
+    const supplier = item.발주업체명 as string
+    summary.bySupplier[supplier] = (summary.bySupplier[supplier] || 0) + 1
     // 자재구분별 건수
     if (item.자재구분) {
-      summary.byMaterialType[item.자재구분] = (summary.byMaterialType[item.자재구분] || 0) + 1
+      const matType = item.자재구분 as string
+      summary.byMaterialType[matType] = (summary.byMaterialType[matType] || 0) + 1
     }
   })
   
@@ -47,9 +50,10 @@ app.get('/api/step1/po-extract', (c) => {
 // Step 2: 계약 납기 검증
 app.get('/api/step2/delivery-validation', (c) => {
   const results = poData.map(item => {
-    const orderDate = new Date(item.발주일)
-    const leadTime = item['LEAD TIME']
-    const contractDate = item.계약납기일 ? new Date(item.계약납기일) : null
+    const orderDate = new Date(item.발주일 as string)
+    const leadTime = Number(item['LEAD TIME']) || 0
+    const contractDateStr = item.계약납기일
+    const contractDate = contractDateStr ? new Date(contractDateStr) : null
     
     // 예상 완료일 = 발주일 + Lead Time
     const expectedDate = new Date(orderDate)
@@ -93,8 +97,8 @@ app.get('/api/step3/pnd-changes', (c) => {
   const changedItems = poData.filter(item => item['변경된 PND'] && item['PND 변경'])
   
   const results = changedItems.map(item => {
-    const originalPnd = new Date(item.PND)
-    const changedPnd = new Date(item['변경된 PND']!)
+    const originalPnd = new Date(item.PND as string)
+    const changedPnd = new Date(item['변경된 PND'] as string)
     const daysDiff = Math.floor((changedPnd.getTime() - originalPnd.getTime()) / (1000 * 60 * 60 * 24))
     
     return {
@@ -121,7 +125,7 @@ app.get('/api/step3/pnd-changes', (c) => {
 app.get('/api/step4/supply-requests', (c) => {
   const withRequest = poData.filter(item => item.보급요청일)
   const withoutRequest = poData.filter(item => !item.보급요청일)
-  const urgentRequests = poData.filter(item => item.비고?.includes('긴급'))
+  const urgentRequests = poData.filter(item => (item.비고 as string | null)?.includes('긴급'))
   
   return c.json({
     data: poData,
@@ -296,7 +300,7 @@ app.get('/api/alerts', (c) => {
       detail: '즉시 처리 필요',
       time: '10분 전',
       isNew: true,
-      items: poData.filter(item => item.비고?.includes('긴급')).slice(0, 3)
+      items: poData.filter(item => (item.비고 as string | null)?.includes('긴급')).slice(0, 3)
     },
     {
       id: 4,

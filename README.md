@@ -2,27 +2,37 @@
 
 ## 프로젝트 개요
 - **Name**: Hanwha Ocean SCM Delivery Management AI Agent
-- **Version**: 1.0.0 (Demo)
+- **Version**: 2.0.0 (Demo - PRD v2)
 - **Goal**: SCM 납기관리 업무 자동화 - PO 정보 추출부터 공급사 회신 분석까지 8단계 프로세스 자동화
 - **Platform**: Railway (Node.js + Hono)
 
-## 주요 기능 (8단계 프로세스)
+## 주요 기능 (8단계 프로세스) - PRD v2
 
-| 단계 | 기능 | 설명 |
-|------|------|------|
-| 1 | PO 추출 | 50건 발주 데이터 추출 및 요약 통계 |
-| 2 | 납기 검증 | 발주일 + Lead Time 기반 위험/주의/정상 분류 |
-| 3 | PND 변경 | PND 변경 이력 17건 추적 및 분석 |
-| 4 | 보급 요청 | 32건 보급 요청 현황 및 긴급 요청 식별 |
-| 5 | 적정성 판단 | 계약납기 vs 보급요청일 비교 분석 |
-| 6 | 메일 발송 | 26개 공급사 메일 발송 현황 |
-| 7 | 회신 수집 | 65% 제출률, 미제출 공급사 알림 |
-| 8 | 비교 분석 | 납기 변동 및 위험 항목 최종 분석 |
+| 단계 | 프로세스명 | 설명 |
+|------|-----------|------|
+| ① | 납기관리 Tracking 포맷 생성 | 50건 데이터 추출 (원본 엑셀 포맷 유지) |
+| ② | 계약 납기일 검증 | 발주일 + Lead Time vs 계약납기일 비교 |
+| ③ | PND 변경 사항 검토 | PND 변경 이력 추적 및 분석 |
+| ④ | 보급 요청일 검토 | 보급 요청 현황 및 긴급 요청 식별 |
+| ⑤ | 납기 예정일 적정성 판단 | 계약납기일 vs 보급요청일 비교 분석 |
+| ⑥ | 주단위 협력사 납기 예정일 업데이트 요청 | 매주 전체 협력사 메일 발송 |
+| ⑦ | 납기 예정일 회신 수집 | 협력사 기준 제출률 관리 |
+| ⑧ | 비교 분석 | 5.1 변동현황 + 5.2 적정성판단 |
 
 ## URL & Repository
 
 - **GitHub**: https://github.com/0JaeminKim0/SCM_DEMO
 - **Local Dev**: http://localhost:3000
+
+## 용어 정의 (PRD v2)
+
+| 용어 | 설명 |
+|------|------|
+| **PND** | 설계팀이 정한 생산에 필요한 자재 도착 기한 |
+| **보급요청일** | 생산팀이 요청한 자재 필요일 (PND와 별개) |
+| **계약납기일** | 계약서상 납기일 (고정값) |
+| **협력사 납기예정일** | 협력사가 회신한 실제 납품 예정일 |
+| **2547주/2548주/2549주** | 협력사 납기예정일 1차/2차/3차 (주차 기준) |
 
 ## API Endpoints
 
@@ -30,38 +40,43 @@
 |----------|--------|------|
 | `/` | GET | 메인 대시보드 |
 | `/api/data` | GET | 전체 PO 데이터 |
-| `/api/step1/po-extract` | GET | PO 추출 결과 |
-| `/api/step2/delivery-validation` | GET | 납기 검증 결과 |
-| `/api/step3/pnd-changes` | GET | PND 변경 현황 |
-| `/api/step4/supply-requests` | GET | 보급 요청 현황 |
-| `/api/step5/appropriateness` | GET | 적정성 판단 결과 |
-| `/api/step6/email-status` | GET | 메일 발송 현황 |
-| `/api/step7/response-collection` | GET | 회신 수집 현황 |
-| `/api/step8/comparison-analysis` | GET | 비교 분석 결과 |
+| `/api/step1/po-extract` | GET | 납기관리 Tracking 포맷 생성 |
+| `/api/step2/delivery-validation` | GET | 계약 납기일 검증 |
+| `/api/step3/pnd-changes` | GET | PND 변경 사항 검토 |
+| `/api/step4/supply-requests` | GET | 보급 요청일 검토 |
+| `/api/step5/appropriateness` | GET | 납기 예정일 적정성 판단 |
+| `/api/step6/email-status` | GET | 협력사 메일 발송 현황 |
+| `/api/step7/response-collection` | GET | 납기 예정일 회신 수집 |
+| `/api/step8/comparison-analysis` | GET | 비교 분석 |
 | `/api/alerts` | GET | 실시간 알림 목록 |
 
-## 데이터 모델
+## PRD v2 주요 변경사항
 
-### POData Interface
-```typescript
-interface POData {
-  구분: string;              // 일반/대형
-  발주업체명: string;        // 공급사명
-  호선: number;              // 선박 번호
-  구매오더: number;          // PO 번호
-  자재번호: string;          // 자재 코드
-  자재내역: string;          // 자재 설명
-  'LEAD TIME': number;       // 리드타임 (일)
-  발주일: string;            // 발주 날짜
-  PND: string;               // 계획 납기일
-  '변경된 PND': string | null;
-  계약납기일: string | null;
-  보급요청일: string | null;
-  지연구분: string | null;   // 지연/주의/null
-  결품구분: string | null;   // 결품/null
-  // ... 기타 38개 필드
-}
-```
+### 1. 프로세스명 변경
+- PO 추출 → 납기관리 Tracking 포맷 생성
+- 납기 검증 → 계약 납기일 검증
+- 보급 요청 → 보급 요청일 검토
+- 적정성 판단 → 납기 예정일 적정성 판단
+- 메일 발송 → 주단위 협력사 납기 예정일 업데이트 요청
+- 회신 수집 → 납기 예정일 회신 수집
+
+### 2. STEP ① 엑셀 포맷 유지
+- 원본 엑셀 컬럼 순서, 컬럼명 변경 불가
+
+### 3. STEP ⑥ 메일 본문 추가
+- 요청 사항, 발주 현황 요약, 회신 기한 포함
+- 첨부 파일: 납기예정일_회신양식_{협력사명}.xlsx
+
+### 4. STEP ⑦ 제출률 기준 변경
+- 자재 건수 → 협력사 수 기준
+- 음수 표기 → "⏳ 대기중" 또는 "✅ 제출완료"
+
+### 5. STEP ⑧ 하위 섹션 분리
+- 5.1 자재별 협력사 납기 예정일 변동 현황
+- 5.2 납기 적정성 판단 (3차 납기예정일 vs 보급요청일)
+
+### 6. 알림 센터 프로세스명 연동
+- 각 알림에 해당 STEP 명칭 표시
 
 ## 기술 스택
 
@@ -113,7 +128,7 @@ webapp/
 │   └── data.ts        # PO 데이터 (50건)
 ├── public/
 │   └── static/
-│       ├── app.js     # 프론트엔드 JavaScript
+│       ├── app.js     # 프론트엔드 JavaScript (PRD v2)
 │       └── style.css  # 커스텀 스타일
 ├── dist/              # 빌드 출력
 ├── railway.json       # Railway 설정
@@ -124,21 +139,19 @@ webapp/
 └── README.md
 ```
 
-## UI/UX 특징
-
-- **8단계 스텝퍼**: 시각적 프로세스 진행 표시
-- **자동 실행 모드**: 순차적 단계 자동 실행
-- **수동 탐색 모드**: 개별 단계 클릭 탐색
-- **알림 센터**: 실시간 알림 (납기 지연, PND 변경, 긴급 요청)
-- **신호등 시스템**: 🔴 위험 / 🟡 주의 / 🟢 정상
-- **토스트 알림**: 단계 완료 시 피드백
-
 ## 변경 이력
+
+- **v2.0.0** (2025-01-28): PRD v2 반영
+  - 8단계 프로세스명 변경
+  - STEP ⑥ 메일 본문 내용 추가
+  - STEP ⑦ 협력사 기준 제출률
+  - STEP ⑧ 5.1/5.2 섹션 분리
+  - 알림 센터 프로세스명 연동
+  - 용어 정의 추가
 
 - **v1.0.0** (2025-01-28): Railway 배포용으로 변환
   - Cloudflare Pages → Railway (Node.js)
   - Vite → TypeScript 직접 컴파일
-  - 서버 사이드 static file serving 추가
 
 ## 라이선스
 

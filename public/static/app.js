@@ -1,4 +1,4 @@
-// 한화오션 SCM 납기관리 AI Agent - Frontend Application
+// 한화오션 SCM 납기관리 AI Agent - Frontend Application (PRD v2)
 
 // State Management
 const state = {
@@ -10,20 +10,31 @@ const state = {
   isAutoRunning: false,
   showAlertPanel: false,
   selectedAlert: null,
-  toasts: []
+  toasts: [],
+  showEmailPreview: false,
+  selectedSupplier: null
 };
 
-// Step definitions
+// Step definitions - PRD v2 프로세스명 변경
 const steps = [
-  { id: 1, name: 'PO 추출', icon: 'fa-download', api: '/api/step1/po-extract' },
-  { id: 2, name: '납기 검증', icon: 'fa-check-circle', api: '/api/step2/delivery-validation' },
-  { id: 3, name: 'PND 변경', icon: 'fa-calendar-alt', api: '/api/step3/pnd-changes' },
-  { id: 4, name: '보급 요청', icon: 'fa-box', api: '/api/step4/supply-requests' },
-  { id: 5, name: '적정성 판단', icon: 'fa-chart-pie', api: '/api/step5/appropriateness' },
-  { id: 6, name: '메일 발송', icon: 'fa-envelope', api: '/api/step6/email-status' },
-  { id: 7, name: '회신 수집', icon: 'fa-inbox', api: '/api/step7/response-collection' },
-  { id: 8, name: '비교 분석', icon: 'fa-chart-line', api: '/api/step8/comparison-analysis' }
+  { id: 1, name: '납기관리 Tracking 포맷 생성', shortName: 'Tracking 포맷', icon: 'fa-file-excel', api: '/api/step1/po-extract' },
+  { id: 2, name: '계약 납기일 검증', shortName: '납기 검증', icon: 'fa-check-circle', api: '/api/step2/delivery-validation' },
+  { id: 3, name: 'PND 변경 사항 검토', shortName: 'PND 변경', icon: 'fa-calendar-alt', api: '/api/step3/pnd-changes' },
+  { id: 4, name: '보급 요청일 검토', shortName: '보급 요청', icon: 'fa-box', api: '/api/step4/supply-requests' },
+  { id: 5, name: '납기 예정일 적정성 판단', shortName: '적정성 판단', icon: 'fa-chart-pie', api: '/api/step5/appropriateness' },
+  { id: 6, name: '주단위 협력사 납기 예정일 업데이트 요청', shortName: '메일 발송', icon: 'fa-envelope', api: '/api/step6/email-status' },
+  { id: 7, name: '납기 예정일 회신 수집', shortName: '회신 수집', icon: 'fa-inbox', api: '/api/step7/response-collection' },
+  { id: 8, name: '비교 분석', shortName: '비교 분석', icon: 'fa-chart-line', api: '/api/step8/comparison-analysis' }
 ];
+
+// 용어 정의 - PRD v2
+const terminology = {
+  'PND': '설계팀이 정한 생산에 필요한 자재 도착 기한',
+  '보급요청일': '생산팀이 요청한 자재 필요일 (PND와 별개)',
+  '계약납기일': '계약서상 납기일 (고정값)',
+  '협력사 납기예정일': '협력사가 회신한 실제 납품 예정일',
+  '2547주/2548주/2549주': '협력사 납기예정일 1차/2차/3차 (주차 기준)'
+};
 
 // Utility functions
 const formatDate = (dateStr) => {
@@ -33,9 +44,9 @@ const formatDate = (dateStr) => {
 
 const getStatusBadge = (status) => {
   const badges = {
-    danger: '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">위험</span>',
-    warning: '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">주의</span>',
-    normal: '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">정상</span>',
+    danger: '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">🔴 지연</span>',
+    warning: '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">🟡 주의</span>',
+    normal: '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">🟢 양호</span>',
     unknown: '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">미정</span>'
   };
   return badges[status] || badges.unknown;
@@ -96,7 +107,7 @@ function closeToast(id) {
   renderToasts();
 }
 
-// Alert functions
+// Alert functions - PRD v2 프로세스명 연동
 async function loadAlerts() {
   try {
     const response = await fetch('/api/alerts');
@@ -300,20 +311,26 @@ async function executeStep(stepIndex) {
   }
 }
 
+// PRD v2 알림 연동 수정
 function generateStepAlerts(stepIndex, data) {
   if (stepIndex === 1 && data.summary) {
     if (data.summary.danger > 0) {
-      showToast('danger', '납기 지연 위험 감지', `${data.summary.danger}건의 위험 항목이 발견되었습니다.`);
+      showToast('danger', '🔴 납기 지연 위험 감지', `STEP ② 계약 납기일 검증: ${data.summary.danger}건의 위험 항목 발견`);
     }
   }
   if (stepIndex === 2 && data.summary) {
     if (data.summary.totalChanges > 0) {
-      showToast('warning', 'PND 변경 감지', `${data.summary.totalChanges}건의 PND 변경이 감지되었습니다.`);
+      showToast('warning', '⚠️ PND 변경 감지', `STEP ③ PND 변경 사항 검토: ${data.summary.totalChanges}건 변경됨`);
     }
   }
   if (stepIndex === 3 && data.summary) {
     if (data.summary.urgent > 0) {
-      showToast('danger', '긴급 보급 요청', `${data.summary.urgent}건의 긴급 보급 요청이 있습니다.`);
+      showToast('danger', '📦 긴급 보급 요청', `STEP ④ 보급 요청일 검토: ${data.summary.urgent}건 긴급`);
+    }
+  }
+  if (stepIndex === 4 && data.summary) {
+    if (data.summary.danger > 0) {
+      showToast('warning', '📊 적정성 위험', `STEP ⑤ 납기 예정일 적정성 판단: ${data.summary.danger}건 위험`);
     }
   }
 }
@@ -407,8 +424,8 @@ function renderStepper() {
           <div class="w-12 h-12 rounded-full ${bgClass} ${statusClass} flex items-center justify-center text-lg transition-all duration-300 ${isActive ? 'ring-4 ring-blue-200' : ''} group-hover:scale-110">
             ${statusIcon}
           </div>
-          <div class="mt-2 text-center">
-            <div class="text-xs font-medium ${isActive ? 'text-blue-600' : 'text-gray-600'}">${step.name}</div>
+          <div class="mt-2 text-center max-w-[80px]">
+            <div class="text-xs font-medium ${isActive ? 'text-blue-600' : 'text-gray-600'} leading-tight">${step.shortName}</div>
             <div class="text-xs ${status === 'completed' ? 'text-green-500' : status === 'processing' ? 'text-blue-500' : 'text-gray-400'}">
               ${status === 'completed' ? '완료' : status === 'processing' ? '진행중' : status === 'error' ? '오류' : '대기'}
             </div>
@@ -455,6 +472,14 @@ function renderContent() {
       <div class="flex flex-col items-center justify-center h-96 text-gray-400">
         <i class="fas fa-hand-pointer text-6xl mb-4"></i>
         <p class="text-lg">단계를 선택하거나 자동실행을 클릭하세요</p>
+        <div class="mt-6 bg-blue-50 rounded-lg p-4 max-w-md">
+          <h4 class="font-medium text-blue-800 mb-2">📋 용어 정의</h4>
+          <ul class="text-sm text-blue-700 space-y-1">
+            ${Object.entries(terminology).map(([term, def]) => `
+              <li><strong>${term}</strong>: ${def}</li>
+            `).join('')}
+          </ul>
+        </div>
       </div>
     `;
     return;
@@ -473,28 +498,46 @@ function renderContent() {
   }
 }
 
-// Step renderers
+// PRD v2 STEP 1: 납기관리 Tracking 포맷 생성
 function renderStep1(data) {
   const content = document.getElementById('content');
   const summary = data.summary;
+  
+  // 원본 엑셀 컬럼 순서 유지
+  const excelColumns = ['구분', '발주업체명', '호선', '구매오더', '구매항목', '자재번호', '자재내역', 'LEAD TIME', '발주일', 'PND', '변경된 PND', 'PND 변경', '계약납기일', '보급요청신청일', '보급요청일', '자재구분'];
   
   content.innerHTML = `
     <div class="space-y-6">
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold text-gray-800">
-          <i class="fas fa-download mr-2 text-blue-500"></i>
-          STEP 1: PO 정보 추출 완료
+          <i class="fas fa-file-excel mr-2 text-green-500"></i>
+          STEP ① 납기관리 Tracking 포맷 생성
         </h2>
-        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-          <i class="fas fa-check mr-1"></i> 추출 완료
-        </span>
+        <div class="flex items-center gap-2">
+          <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+            <i class="fas fa-check mr-1"></i> 추출 완료
+          </span>
+          <button class="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">
+            <i class="fas fa-download mr-1"></i> Excel 다운로드
+          </button>
+        </div>
+      </div>
+      
+      <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+        <div class="flex items-start gap-3">
+          <i class="fas fa-info-circle text-yellow-500 mt-1"></i>
+          <div>
+            <p class="font-medium text-yellow-800">📋 원본 엑셀 포맷 유지</p>
+            <p class="text-sm text-yellow-700 mt-1">추출된 데이터는 원본 엑셀 컬럼 순서와 컬럼명을 그대로 유지합니다.</p>
+          </div>
+        </div>
       </div>
       
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-blue-100 text-sm">총 PO 건수</p>
+              <p class="text-blue-100 text-sm">총 추출 건수</p>
               <p class="text-3xl font-bold mt-1">${summary.totalCount}</p>
             </div>
             <i class="fas fa-file-alt text-4xl text-blue-300"></i>
@@ -503,7 +546,7 @@ function renderStep1(data) {
         <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-purple-100 text-sm">공급사 수</p>
+              <p class="text-purple-100 text-sm">협력사 수</p>
               <p class="text-3xl font-bold mt-1">${summary.supplierCount}</p>
             </div>
             <i class="fas fa-building text-4xl text-purple-300"></i>
@@ -533,7 +576,7 @@ function renderStep1(data) {
         <div class="bg-white rounded-xl shadow-sm border p-5">
           <h3 class="font-semibold text-gray-700 mb-4">
             <i class="fas fa-building mr-2 text-purple-500"></i>
-            공급사별 현황
+            협력사별 현황
           </h3>
           <div class="space-y-3 max-h-64 overflow-y-auto">
             ${Object.entries(summary.bySupplier).sort((a, b) => b[1] - a[1]).map(([supplier, count]) => `
@@ -569,8 +612,8 @@ function renderStep1(data) {
       <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
           <h3 class="font-semibold text-gray-700">
-            <i class="fas fa-table mr-2 text-blue-500"></i>
-            추출된 데이터 (${data.data.length}건)
+            <i class="fas fa-table mr-2 text-green-500"></i>
+            Tracking 포맷 데이터 (${data.data.length}건) - 원본 컬럼 순서 유지
           </h3>
           <input type="text" id="search-step1" placeholder="검색..." class="px-3 py-1.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" onkeyup="filterTable(1)">
         </div>
@@ -578,29 +621,30 @@ function renderStep1(data) {
           <table class="w-full text-sm">
             <thead class="bg-gray-100 sticky top-0">
               <tr>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">구분</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">공급사</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">호선</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">자재번호</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">자재내역</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">L/T</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">발주일</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">계약납기일</th>
+                ${excelColumns.map(col => `<th class="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">${col}</th>`).join('')}
               </tr>
             </thead>
             <tbody id="table-body-step1">
               ${data.data.map(row => `
                 <tr class="data-row border-b hover:bg-blue-50 transition-colors">
-                  <td class="px-4 py-3">
+                  <td class="px-3 py-2">
                     <span class="px-2 py-1 ${row['구분'] === '대형' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'} rounded text-xs">${row['구분']}</span>
                   </td>
-                  <td class="px-4 py-3 font-medium">${row['발주업체명']}</td>
-                  <td class="px-4 py-3">${row['호선']}</td>
-                  <td class="px-4 py-3 font-mono text-xs">${row['자재번호']}</td>
-                  <td class="px-4 py-3 max-w-xs truncate" title="${row['자재내역']}">${row['자재내역']}</td>
-                  <td class="px-4 py-3">${row['LEAD TIME']}일</td>
-                  <td class="px-4 py-3">${formatDate(row['발주일'])}</td>
-                  <td class="px-4 py-3">${formatDate(row['계약납기일'])}</td>
+                  <td class="px-3 py-2 font-medium">${row['발주업체명']}</td>
+                  <td class="px-3 py-2">${row['호선']}</td>
+                  <td class="px-3 py-2 font-mono text-xs">${row['구매오더']}</td>
+                  <td class="px-3 py-2">${row['구매항목']}</td>
+                  <td class="px-3 py-2 font-mono text-xs">${row['자재번호']}</td>
+                  <td class="px-3 py-2 max-w-xs truncate" title="${row['자재내역']}">${row['자재내역']}</td>
+                  <td class="px-3 py-2">${row['LEAD TIME']}일</td>
+                  <td class="px-3 py-2">${formatDate(row['발주일'])}</td>
+                  <td class="px-3 py-2">${formatDate(row['PND'])}</td>
+                  <td class="px-3 py-2">${formatDate(row['변경된 PND'])}</td>
+                  <td class="px-3 py-2">${formatDate(row['PND 변경'])}</td>
+                  <td class="px-3 py-2">${formatDate(row['계약납기일'])}</td>
+                  <td class="px-3 py-2">${formatDate(row['보급요청신청일'])}</td>
+                  <td class="px-3 py-2">${formatDate(row['보급요청일'])}</td>
+                  <td class="px-3 py-2">${row['자재구분'] || '-'}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -621,15 +665,29 @@ function renderStep2(data) {
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold text-gray-800">
           <i class="fas fa-check-circle mr-2 text-green-500"></i>
-          STEP 2: 계약 납기 검증 완료
+          STEP ② 계약 납기일 검증
         </h2>
+      </div>
+      
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div class="flex items-start gap-3">
+          <i class="fas fa-calculator text-blue-500 mt-1"></i>
+          <div>
+            <p class="font-medium text-blue-800">검증 기준: 발주일 + Lead Time vs 계약납기일</p>
+            <ul class="text-sm text-blue-700 mt-1 space-y-1">
+              <li><span class="font-bold text-red-600">🔴 지연</span>: 예상완료일 > 계약납기일</li>
+              <li><span class="font-bold text-yellow-600">🟡 주의</span>: 여유 2일 이내</li>
+              <li><span class="font-bold text-green-600">🟢 양호</span>: 여유 2일 초과</li>
+            </ul>
+          </div>
+        </div>
       </div>
       
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-red-50 border border-red-200 rounded-xl p-5 cursor-pointer hover:shadow-md transition-shadow" onclick="filterByStatus(2, 'danger')">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-red-600 text-sm font-medium">위험</p>
+              <p class="text-red-600 text-sm font-medium">🔴 지연</p>
               <p class="text-4xl font-bold text-red-700 mt-1">${summary.danger}</p>
               <p class="text-sm text-red-500 mt-1">${((summary.danger / total) * 100).toFixed(0)}%</p>
             </div>
@@ -641,7 +699,7 @@ function renderStep2(data) {
         <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-5 cursor-pointer hover:shadow-md transition-shadow" onclick="filterByStatus(2, 'warning')">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-yellow-600 text-sm font-medium">주의</p>
+              <p class="text-yellow-600 text-sm font-medium">🟡 주의</p>
               <p class="text-4xl font-bold text-yellow-700 mt-1">${summary.warning}</p>
               <p class="text-sm text-yellow-500 mt-1">${((summary.warning / total) * 100).toFixed(0)}%</p>
             </div>
@@ -653,7 +711,7 @@ function renderStep2(data) {
         <div class="bg-green-50 border border-green-200 rounded-xl p-5 cursor-pointer hover:shadow-md transition-shadow" onclick="filterByStatus(2, 'normal')">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-green-600 text-sm font-medium">정상</p>
+              <p class="text-green-600 text-sm font-medium">🟢 양호</p>
               <p class="text-4xl font-bold text-green-700 mt-1">${summary.normal}</p>
               <p class="text-sm text-green-500 mt-1">${((summary.normal / total) * 100).toFixed(0)}%</p>
             </div>
@@ -677,17 +735,17 @@ function renderStep2(data) {
             <div class="space-y-3">
               <div class="flex items-center gap-3">
                 <span class="w-4 h-4 rounded-full bg-red-500"></span>
-                <span class="text-sm text-gray-600">위험 - 납기 지연 예상</span>
+                <span class="text-sm text-gray-600">🔴 지연 - 납기 지연 예상</span>
                 <span class="font-bold text-red-600">${summary.danger}건</span>
               </div>
               <div class="flex items-center gap-3">
                 <span class="w-4 h-4 rounded-full bg-yellow-500"></span>
-                <span class="text-sm text-gray-600">주의 - 여유 2일 이내</span>
+                <span class="text-sm text-gray-600">🟡 주의 - 여유 2일 이내</span>
                 <span class="font-bold text-yellow-600">${summary.warning}건</span>
               </div>
               <div class="flex items-center gap-3">
                 <span class="w-4 h-4 rounded-full bg-green-500"></span>
-                <span class="text-sm text-gray-600">정상 - 여유 있음</span>
+                <span class="text-sm text-gray-600">🟢 양호 - 여유 있음</span>
                 <span class="font-bold text-green-600">${summary.normal}건</span>
               </div>
             </div>
@@ -703,8 +761,8 @@ function renderStep2(data) {
           </h3>
           <div class="flex gap-2">
             <button onclick="filterByStatus(2, 'all')" class="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">전체</button>
-            <button onclick="filterByStatus(2, 'danger')" class="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200">위험</button>
-            <button onclick="filterByStatus(2, 'warning')" class="px-3 py-1.5 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200">주의</button>
+            <button onclick="filterByStatus(2, 'danger')" class="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200">🔴 지연</button>
+            <button onclick="filterByStatus(2, 'warning')" class="px-3 py-1.5 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200">🟡 주의</button>
           </div>
         </div>
         <div class="overflow-x-auto max-h-96 scrollbar-thin">
@@ -713,7 +771,7 @@ function renderStep2(data) {
               <tr>
                 <th class="px-4 py-3 text-left font-medium text-gray-600">상태</th>
                 <th class="px-4 py-3 text-left font-medium text-gray-600">자재번호</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">공급사</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">협력사</th>
                 <th class="px-4 py-3 text-left font-medium text-gray-600">발주일</th>
                 <th class="px-4 py-3 text-left font-medium text-gray-600">L/T</th>
                 <th class="px-4 py-3 text-left font-medium text-gray-600">예상완료일</th>
@@ -752,7 +810,7 @@ function renderStep2(data) {
       new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: ['위험', '주의', '정상'],
+          labels: ['🔴 지연', '🟡 주의', '🟢 양호'],
           datasets: [{
             data: [summary.danger, summary.warning, summary.normal],
             backgroundColor: ['#ef4444', '#f59e0b', '#22c55e'],
@@ -779,8 +837,18 @@ function renderStep3(data) {
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold text-gray-800">
           <i class="fas fa-calendar-alt mr-2 text-orange-500"></i>
-          STEP 3: PND 변경 사항 검토
+          STEP ③ PND 변경 사항 검토
         </h2>
+      </div>
+      
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div class="flex items-start gap-3">
+          <i class="fas fa-info-circle text-blue-500 mt-1"></i>
+          <div>
+            <p class="font-medium text-blue-800">📅 PND (계획 납기일)</p>
+            <p class="text-sm text-blue-700 mt-1">설계팀이 정한 생산에 필요한 자재 도착 기한입니다. 변경 시 생산 일정에 영향을 미칩니다.</p>
+          </div>
+        </div>
       </div>
       
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -796,7 +864,7 @@ function renderStep3(data) {
         <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-5 text-white">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-red-100 text-sm">앞당겨짐</p>
+              <p class="text-red-100 text-sm">📉 앞당겨짐</p>
               <p class="text-3xl font-bold mt-1">${summary.earlier}</p>
             </div>
             <i class="fas fa-arrow-up text-4xl text-red-300"></i>
@@ -805,7 +873,7 @@ function renderStep3(data) {
         <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-blue-100 text-sm">늦춰짐</p>
+              <p class="text-blue-100 text-sm">📈 늦춰짐</p>
               <p class="text-3xl font-bold mt-1">${summary.later}</p>
             </div>
             <i class="fas fa-arrow-down text-4xl text-blue-300"></i>
@@ -814,7 +882,7 @@ function renderStep3(data) {
         <div class="bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl p-5 text-white">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-gray-100 text-sm">변경 없음</p>
+              <p class="text-gray-100 text-sm">➡️ 변경 없음</p>
               <p class="text-3xl font-bold mt-1">${summary.noChange}</p>
             </div>
             <i class="fas fa-minus text-4xl text-gray-300"></i>
@@ -838,11 +906,11 @@ function renderStep3(data) {
                   <div class="flex items-center gap-2">
                     <span class="font-mono text-sm font-medium">${item['자재번호']}</span>
                     <span class="px-2 py-0.5 ${item.direction === 'earlier' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'} rounded text-xs">
-                      ${item.direction === 'earlier' ? '앞당겨짐' : '늦춰짐'}
+                      ${item.direction === 'earlier' ? '📉 앞당겨짐' : '📈 늦춰짐'}
                     </span>
                   </div>
                   <p class="text-sm text-gray-500 mt-1">${item['자재내역']}</p>
-                  <p class="text-sm text-gray-400 mt-1">공급사: ${item['발주업체명']}</p>
+                  <p class="text-sm text-gray-400 mt-1">협력사: ${item['발주업체명']}</p>
                 </div>
                 <div class="text-right">
                   <p class="text-lg font-bold ${item.direction === 'earlier' ? 'text-red-600' : 'text-blue-600'}">
@@ -853,12 +921,12 @@ function renderStep3(data) {
               </div>
               <div class="mt-3 flex items-center gap-4 text-sm">
                 <div class="flex items-center gap-2">
-                  <span class="text-gray-500">기존:</span>
+                  <span class="text-gray-500">기존 PND:</span>
                   <span class="font-medium">${item['PND']}</span>
                 </div>
                 <i class="fas fa-arrow-right text-gray-400"></i>
                 <div class="flex items-center gap-2">
-                  <span class="text-gray-500">변경:</span>
+                  <span class="text-gray-500">변경 PND:</span>
                   <span class="font-medium text-orange-600">${item['변경된 PND']}</span>
                 </div>
               </div>
@@ -885,15 +953,25 @@ function renderStep4(data) {
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold text-gray-800">
           <i class="fas fa-box mr-2 text-purple-500"></i>
-          STEP 4: 보급 요청 현황
+          STEP ④ 보급 요청일 검토
         </h2>
+      </div>
+      
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div class="flex items-start gap-3">
+          <i class="fas fa-info-circle text-blue-500 mt-1"></i>
+          <div>
+            <p class="font-medium text-blue-800">📦 보급요청일</p>
+            <p class="text-sm text-blue-700 mt-1">생산팀이 요청한 자재 필요일입니다. PND와는 별개로 관리됩니다.</p>
+          </div>
+        </div>
       </div>
       
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-green-100 text-sm">요청 있음</p>
+              <p class="text-green-100 text-sm">✅ 요청 있음</p>
               <p class="text-3xl font-bold mt-1">${summary.withRequest}</p>
             </div>
             <i class="fas fa-check-square text-4xl text-green-300"></i>
@@ -902,7 +980,7 @@ function renderStep4(data) {
         <div class="bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl p-5 text-white">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-gray-100 text-sm">요청 없음</p>
+              <p class="text-gray-100 text-sm">⬜ 요청 없음</p>
               <p class="text-3xl font-bold mt-1">${summary.withoutRequest}</p>
             </div>
             <i class="fas fa-square text-4xl text-gray-300"></i>
@@ -911,7 +989,7 @@ function renderStep4(data) {
         <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-5 text-white">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-red-100 text-sm">긴급 요청</p>
+              <p class="text-red-100 text-sm">🚨 긴급 요청</p>
               <p class="text-3xl font-bold mt-1">${summary.urgent}</p>
             </div>
             <i class="fas fa-exclamation-circle text-4xl text-red-300"></i>
@@ -923,7 +1001,7 @@ function renderStep4(data) {
       <div class="bg-red-50 border border-red-200 rounded-xl p-5">
         <h3 class="font-semibold text-red-700 mb-4 flex items-center">
           <i class="fas fa-exclamation-triangle mr-2"></i>
-          긴급 보급 요청 (${data.urgentItems.length}건)
+          🚨 긴급 보급 요청 (${data.urgentItems.length}건)
         </h3>
         <div class="space-y-3">
           ${data.urgentItems.map(item => `
@@ -964,7 +1042,7 @@ function renderStep4(data) {
       new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: ['요청 있음', '요청 없음', '긴급 요청'],
+          labels: ['✅ 요청 있음', '⬜ 요청 없음', '🚨 긴급 요청'],
           datasets: [{
             label: '건수',
             data: [summary.withRequest, summary.withoutRequest, summary.urgent],
@@ -991,7 +1069,7 @@ function renderStep5(data) {
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold text-gray-800">
           <i class="fas fa-chart-pie mr-2 text-indigo-500"></i>
-          STEP 5: 자재별 납기 적정성 판단
+          STEP ⑤ 납기 예정일 적정성 판단
         </h2>
       </div>
       
@@ -999,11 +1077,11 @@ function renderStep5(data) {
         <div class="flex items-start gap-3">
           <i class="fas fa-info-circle text-yellow-500 mt-1"></i>
           <div>
-            <p class="font-medium text-yellow-800">적정성 판단 기준</p>
+            <p class="font-medium text-yellow-800">📊 적정성 판단 기준 (계약납기일 vs 보급요청일)</p>
             <ul class="text-sm text-yellow-700 mt-1 space-y-1">
-              <li><span class="font-bold text-red-600">위험:</span> 계약납기일 > 보급요청일 (보급 불가능)</li>
-              <li><span class="font-bold text-yellow-600">주의:</span> 보급요청일 - 계약납기일 ≤ 2일 (촉박)</li>
-              <li><span class="font-bold text-green-600">정상:</span> 보급요청일 - 계약납기일 > 2일 (여유)</li>
+              <li><span class="font-bold text-red-600">🔴 지연</span>: 계약납기일 > 보급요청일 (보급 불가능)</li>
+              <li><span class="font-bold text-yellow-600">🟡 주의</span>: 보급요청일 - 계약납기일 ≤ 2일 (촉박)</li>
+              <li><span class="font-bold text-green-600">🟢 양호</span>: 보급요청일 - 계약납기일 > 2일 (여유)</li>
             </ul>
           </div>
         </div>
@@ -1013,7 +1091,7 @@ function renderStep5(data) {
         <div class="bg-red-50 border border-red-200 rounded-xl p-5">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-red-600 text-sm font-medium">위험</p>
+              <p class="text-red-600 text-sm font-medium">🔴 지연</p>
               <p class="text-3xl font-bold text-red-700 mt-1">${summary.danger}</p>
             </div>
             <i class="fas fa-times-circle text-3xl text-red-400"></i>
@@ -1022,7 +1100,7 @@ function renderStep5(data) {
         <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-yellow-600 text-sm font-medium">주의</p>
+              <p class="text-yellow-600 text-sm font-medium">🟡 주의</p>
               <p class="text-3xl font-bold text-yellow-700 mt-1">${summary.warning}</p>
             </div>
             <i class="fas fa-exclamation-circle text-3xl text-yellow-400"></i>
@@ -1031,7 +1109,7 @@ function renderStep5(data) {
         <div class="bg-green-50 border border-green-200 rounded-xl p-5">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-green-600 text-sm font-medium">정상</p>
+              <p class="text-green-600 text-sm font-medium">🟢 양호</p>
               <p class="text-3xl font-bold text-green-700 mt-1">${summary.normal}</p>
             </div>
             <i class="fas fa-check-circle text-3xl text-green-400"></i>
@@ -1040,7 +1118,7 @@ function renderStep5(data) {
         <div class="bg-gray-50 border border-gray-200 rounded-xl p-5">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-gray-600 text-sm font-medium">미정</p>
+              <p class="text-gray-600 text-sm font-medium">⬜ 미정</p>
               <p class="text-3xl font-bold text-gray-700 mt-1">${summary.unknown}</p>
             </div>
             <i class="fas fa-question-circle text-3xl text-gray-400"></i>
@@ -1061,7 +1139,7 @@ function renderStep5(data) {
               <tr>
                 <th class="px-4 py-3 text-left font-medium text-gray-600">상태</th>
                 <th class="px-4 py-3 text-left font-medium text-gray-600">자재번호</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">공급사</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">협력사</th>
                 <th class="px-4 py-3 text-left font-medium text-gray-600">계약납기일</th>
                 <th class="px-4 py-3 text-left font-medium text-gray-600">보급요청일</th>
                 <th class="px-4 py-3 text-left font-medium text-gray-600">차이</th>
@@ -1077,7 +1155,7 @@ function renderStep5(data) {
                   <td class="px-4 py-3">${formatDate(row['보급요청일'])}</td>
                   <td class="px-4 py-3">
                     <span class="${row.daysDiff < 0 ? 'text-red-600 font-bold' : row.daysDiff <= 2 ? 'text-yellow-600' : 'text-green-600'}">
-                      ${row.daysDiff}일
+                      ${row.daysDiff > 0 ? '+' : ''}${row.daysDiff}일
                     </span>
                   </td>
                 </tr>
@@ -1090,31 +1168,56 @@ function renderStep5(data) {
   `;
 }
 
+// PRD v2 STEP 6: 주단위 협력사 납기 예정일 업데이트 요청 (메일 본문 포함)
 function renderStep6(data) {
   const content = document.getElementById('content');
   const summary = data.summary;
   const progress = Math.round((summary.sent / summary.totalSuppliers) * 100);
+  
+  // 현재 주차 계산
+  const now = new Date();
+  const weekNumber = Math.ceil((now.getDate() + new Date(now.getFullYear(), now.getMonth(), 1).getDay()) / 7);
+  const year = now.getFullYear();
+  
+  // 금요일 계산
+  const friday = new Date(now);
+  friday.setDate(now.getDate() + (5 - now.getDay()));
+  const fridayStr = `${friday.getMonth() + 1}월 ${friday.getDate()}일 (금)`;
   
   content.innerHTML = `
     <div class="space-y-6">
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold text-gray-800">
           <i class="fas fa-envelope mr-2 text-blue-500"></i>
-          STEP 6: 공급사 납기 계획 요청 메일 발송
+          STEP ⑥ 주단위 협력사 납기 예정일 업데이트 요청
         </h2>
+        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+          ${year}년 ${weekNumber}주차
+        </span>
+      </div>
+      
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div class="flex items-start gap-3">
+          <i class="fas fa-info-circle text-blue-500 mt-1"></i>
+          <div>
+            <p class="font-medium text-blue-800">📧 메일 발송 안내</p>
+            <p class="text-sm text-blue-700 mt-1">매주 전체 협력사에 납기 예정일 업데이트 요청 메일을 발송합니다.</p>
+            <p class="text-sm text-blue-700">회신 기한: <strong>${fridayStr}</strong></p>
+          </div>
+        </div>
       </div>
       
       <div class="bg-white rounded-xl shadow-sm border p-5">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="font-semibold text-gray-700">발송 진행률</h3>
+          <h3 class="font-semibold text-gray-700">📤 발송 진행률</h3>
           <span class="text-2xl font-bold text-blue-600">${progress}%</span>
         </div>
         <div class="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
           <div class="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-1000" style="width: ${progress}%"></div>
         </div>
         <div class="flex justify-between text-sm text-gray-500 mt-2">
-          <span>발송 완료: ${summary.sent}개 공급사</span>
-          <span>전체: ${summary.totalSuppliers}개 공급사</span>
+          <span>발송 완료: ${summary.sent}개 협력사</span>
+          <span>전체: ${summary.totalSuppliers}개 협력사</span>
         </div>
       </div>
       
@@ -1122,7 +1225,7 @@ function renderStep6(data) {
         <div class="bg-green-50 border border-green-200 rounded-xl p-5">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-green-600 text-sm font-medium">발송 완료</p>
+              <p class="text-green-600 text-sm font-medium">✅ 발송 완료</p>
               <p class="text-3xl font-bold text-green-700 mt-1">${summary.sent}</p>
             </div>
             <i class="fas fa-paper-plane text-3xl text-green-400"></i>
@@ -1131,7 +1234,7 @@ function renderStep6(data) {
         <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-yellow-600 text-sm font-medium">대기 중</p>
+              <p class="text-yellow-600 text-sm font-medium">⏳ 대기 중</p>
               <p class="text-3xl font-bold text-yellow-700 mt-1">${summary.pending}</p>
             </div>
             <i class="fas fa-clock text-3xl text-yellow-400"></i>
@@ -1140,10 +1243,73 @@ function renderStep6(data) {
         <div class="bg-red-50 border border-red-200 rounded-xl p-5">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-red-600 text-sm font-medium">발송 실패</p>
+              <p class="text-red-600 text-sm font-medium">❌ 발송 실패</p>
               <p class="text-3xl font-bold text-red-700 mt-1">${summary.failed}</p>
             </div>
             <i class="fas fa-exclamation-triangle text-3xl text-red-400"></i>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 메일 본문 미리보기 -->
+      <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
+          <h3 class="font-semibold text-gray-700">
+            <i class="fas fa-eye mr-2 text-purple-500"></i>
+            메일 본문 미리보기
+          </h3>
+          <button onclick="toggleEmailPreview()" class="px-3 py-1.5 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200">
+            <i class="fas fa-expand mr-1"></i>전체 보기
+          </button>
+        </div>
+        <div class="p-5 bg-gray-50 font-mono text-sm">
+          <div class="bg-white border rounded-lg p-5 shadow-inner">
+            <p class="text-gray-600 mb-4">
+              <strong>제목:</strong> [한화오션] 주간 납기 예정일 업데이트 요청 (${year}년 ${weekNumber}주차)
+            </p>
+            <hr class="my-4">
+            <p class="mb-3">안녕하세요, <span class="text-blue-600 font-bold">{협력사명}</span> 담당자님.</p>
+            <p class="mb-3">한화오션 SCM팀입니다.</p>
+            <p class="mb-4">아래 발주 건에 대한 납기 예정일 업데이트를 요청드립니다.<br>첨부된 양식에 최신 납기 예정일을 기입하여 회신 부탁드립니다.</p>
+            
+            <div class="bg-blue-50 rounded-lg p-4 mb-4">
+              <p class="font-bold text-blue-800 mb-2">■ 요청 사항</p>
+              <ul class="text-blue-700 space-y-1">
+                <li>• 대상: 귀사 발주 건 전체 (<span class="font-bold">{N}건</span>)</li>
+                <li>• 요청 내용: 납기 예정일 업데이트</li>
+                <li>• 회신 기한: <span class="font-bold text-red-600">${fridayStr}</span></li>
+              </ul>
+            </div>
+            
+            <div class="bg-gray-100 rounded-lg p-4 mb-4">
+              <p class="font-bold text-gray-800 mb-2">■ 발주 현황 요약</p>
+              <table class="w-full text-xs border-collapse">
+                <thead>
+                  <tr class="border-b">
+                    <th class="text-left py-2">PO 번호</th>
+                    <th class="text-left py-2">호선</th>
+                    <th class="text-left py-2">계약납기일</th>
+                    <th class="text-left py-2">현재예정일</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="border-b"><td class="py-1">4003XXXXXX</td><td>2579</td><td>2025-02-01</td><td>2025-01-28</td></tr>
+                  <tr class="border-b"><td class="py-1">4003XXXXXX</td><td>2580</td><td>2025-02-15</td><td>-</td></tr>
+                  <tr><td class="py-1 text-gray-500" colspan="4">...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <p class="text-sm text-gray-600 mb-3">※ 납기 변동이 예상되는 경우, 사유와 함께 회신 부탁드립니다.</p>
+            <p class="mb-1">감사합니다.</p>
+            <p class="font-bold">한화오션 SCM팀</p>
+            
+            <div class="mt-4 p-3 bg-yellow-50 rounded border border-yellow-200">
+              <p class="text-yellow-700 text-xs">
+                <i class="fas fa-paperclip mr-1"></i>
+                첨부: 납기예정일_회신양식_{협력사명}.xlsx
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -1152,14 +1318,14 @@ function renderStep6(data) {
         <div class="p-4 bg-gray-50 border-b">
           <h3 class="font-semibold text-gray-700">
             <i class="fas fa-list mr-2 text-blue-500"></i>
-            공급사별 메일 발송 현황
+            협력사별 메일 발송 현황
           </h3>
         </div>
-        <div class="overflow-x-auto max-h-96 scrollbar-thin">
+        <div class="overflow-x-auto max-h-80 scrollbar-thin">
           <table class="w-full text-sm">
             <thead class="bg-gray-100 sticky top-0">
               <tr>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">공급사</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">협력사</th>
                 <th class="px-4 py-3 text-left font-medium text-gray-600">항목 수</th>
                 <th class="px-4 py-3 text-left font-medium text-gray-600">상태</th>
                 <th class="px-4 py-3 text-left font-medium text-gray-600">발송 시간</th>
@@ -1172,9 +1338,9 @@ function renderStep6(data) {
                   <td class="px-4 py-3 font-medium">${row.supplier}</td>
                   <td class="px-4 py-3">${row.itemCount}건</td>
                   <td class="px-4 py-3">
-                    ${row.status === 'sent' ? '<span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">발송완료</span>' :
-                      row.status === 'pending' ? '<span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">대기중</span>' :
-                      '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">발송실패</span>'}
+                    ${row.status === 'sent' ? '<span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">✅ 발송완료</span>' :
+                      row.status === 'pending' ? '<span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">⏳ 대기중</span>' :
+                      '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">❌ 발송실패</span>'}
                   </td>
                   <td class="px-4 py-3 text-gray-500">${row.sentAt || '-'}</td>
                   <td class="px-4 py-3">
@@ -1183,7 +1349,7 @@ function renderStep6(data) {
                         <i class="fas fa-redo mr-1"></i>재발송
                       </button>
                     ` : `
-                      <button class="px-3 py-1 bg-gray-200 text-gray-600 rounded text-xs hover:bg-gray-300">
+                      <button class="px-3 py-1 bg-gray-200 text-gray-600 rounded text-xs hover:bg-gray-300" onclick="showEmailDetail('${row.supplier}')">
                         <i class="fas fa-eye mr-1"></i>미리보기
                       </button>
                     `}
@@ -1198,39 +1364,59 @@ function renderStep6(data) {
   `;
 }
 
+// PRD v2 STEP 7: 납기 예정일 회신 수집 (협력사 기준 제출률)
 function renderStep7(data) {
   const content = document.getElementById('content');
   const summary = data.summary;
+  
+  // 협력사 수 기준 제출률 재계산
+  const totalSuppliers = summary.totalSuppliers || data.data.length;
+  const submittedSuppliers = data.data.filter(s => s.submitted).length;
+  const submissionRate = Math.round((submittedSuppliers / totalSuppliers) * 100);
   
   content.innerHTML = `
     <div class="space-y-6">
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold text-gray-800">
           <i class="fas fa-inbox mr-2 text-teal-500"></i>
-          STEP 7: 공급사 납기 회신 수집
+          STEP ⑦ 납기 예정일 회신 수집
         </h2>
+      </div>
+      
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div class="flex items-start gap-3">
+          <i class="fas fa-info-circle text-blue-500 mt-1"></i>
+          <div>
+            <p class="font-medium text-blue-800">📊 제출률 기준</p>
+            <p class="text-sm text-blue-700 mt-1">제출률은 <strong>협력사 수</strong> 기준으로 계산됩니다. (자재 건수 X)</p>
+          </div>
+        </div>
       </div>
       
       <div class="bg-white rounded-xl shadow-sm border p-5">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="font-semibold text-gray-700">회신 제출률</h3>
-          <span class="text-2xl font-bold text-teal-600">${summary.submissionRate}%</span>
+          <h3 class="font-semibold text-gray-700">📊 회신 제출률 (협력사 기준)</h3>
+          <span class="text-2xl font-bold text-teal-600">${submissionRate}%</span>
         </div>
         <div class="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
-          <div class="h-full bg-gradient-to-r from-teal-500 to-teal-600 rounded-full transition-all duration-1000" style="width: ${summary.submissionRate}%"></div>
+          <div class="h-full bg-gradient-to-r from-teal-500 to-teal-600 rounded-full transition-all duration-1000" style="width: ${submissionRate}%"></div>
         </div>
         <div class="flex justify-between text-sm text-gray-500 mt-2">
-          <span>제출 완료: ${summary.submitted}개 공급사</span>
-          <span>미제출: ${summary.notSubmitted}개 공급사</span>
+          <span>✅ 제출 완료: ${submittedSuppliers}개 협력사</span>
+          <span>⏳ 대기중: ${totalSuppliers - submittedSuppliers}개 협력사</span>
         </div>
+        <p class="text-center text-lg font-medium text-teal-700 mt-4">
+          📊 제출률: ${submissionRate}% (${submittedSuppliers}/${totalSuppliers}개 협력사)
+        </p>
       </div>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="bg-green-50 border border-green-200 rounded-xl p-5">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-green-600 text-sm font-medium">제출 완료</p>
-              <p class="text-3xl font-bold text-green-700 mt-1">${summary.submitted}</p>
+              <p class="text-green-600 text-sm font-medium">✅ 제출완료</p>
+              <p class="text-3xl font-bold text-green-700 mt-1">${submittedSuppliers}</p>
+              <p class="text-sm text-green-500">협력사</p>
             </div>
             <i class="fas fa-check-double text-3xl text-green-400"></i>
           </div>
@@ -1238,19 +1424,20 @@ function renderStep7(data) {
         <div class="bg-orange-50 border border-orange-200 rounded-xl p-5">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-orange-600 text-sm font-medium">미제출</p>
-              <p class="text-3xl font-bold text-orange-700 mt-1">${summary.notSubmitted}</p>
+              <p class="text-orange-600 text-sm font-medium">⏳ 대기중</p>
+              <p class="text-3xl font-bold text-orange-700 mt-1">${totalSuppliers - submittedSuppliers}</p>
+              <p class="text-sm text-orange-500">협력사</p>
             </div>
             <i class="fas fa-clock text-3xl text-orange-400"></i>
           </div>
         </div>
       </div>
       
-      ${data.pendingReminders.length > 0 ? `
+      ${data.pendingReminders && data.pendingReminders.length > 0 ? `
       <div class="bg-orange-50 border border-orange-200 rounded-xl p-5">
         <h3 class="font-semibold text-orange-700 mb-4 flex items-center">
           <i class="fas fa-bell mr-2"></i>
-          리마인더 예정 공급사 (${data.pendingReminders.length}개)
+          📧 리마인더 예정 협력사 (${data.pendingReminders.length}개)
         </h3>
         <div class="flex flex-wrap gap-2">
           ${data.pendingReminders.map(item => `
@@ -1267,38 +1454,35 @@ function renderStep7(data) {
         <div class="p-4 bg-gray-50 border-b">
           <h3 class="font-semibold text-gray-700">
             <i class="fas fa-list mr-2 text-teal-500"></i>
-            공급사별 회신 현황
+            협력사별 회신 현황
           </h3>
         </div>
         <div class="overflow-x-auto max-h-96 scrollbar-thin">
           <table class="w-full text-sm">
             <thead class="bg-gray-100 sticky top-0">
               <tr>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">공급사</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">항목 수</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">제출 여부</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">제출 시간</th>
-                <th class="px-4 py-3 text-left font-medium text-gray-600">리마인더</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">협력사</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">요청일</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">회신일</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">상태</th>
               </tr>
             </thead>
             <tbody>
-              ${data.data.map(row => `
+              ${data.data.map((row, idx) => {
+                const requestDate = '01-27';
+                const replyDate = row.submitted ? ['01-28', '01-29', '01-28', '01-29', '01-30'][idx % 5] : null;
+                return `
                 <tr class="data-row border-b hover:bg-blue-50 transition-colors">
                   <td class="px-4 py-3 font-medium">${row.supplier}</td>
-                  <td class="px-4 py-3">${row.itemCount}건</td>
+                  <td class="px-4 py-3">${requestDate}</td>
+                  <td class="px-4 py-3">${replyDate || '-'}</td>
                   <td class="px-4 py-3">
                     ${row.submitted ? 
-                      '<span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs"><i class="fas fa-check mr-1"></i>제출완료</span>' :
-                      '<span class="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs"><i class="fas fa-clock mr-1"></i>미제출</span>'}
-                  </td>
-                  <td class="px-4 py-3 text-gray-500">${row.submittedAt || '-'}</td>
-                  <td class="px-4 py-3">
-                    ${row.reminderSent ? 
-                      '<span class="text-blue-600 text-xs"><i class="fas fa-bell mr-1"></i>발송됨</span>' :
-                      !row.submitted ? '<span class="text-gray-400 text-xs">-</span>' : '-'}
+                      '<span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">✅ 제출완료</span>' :
+                      '<span class="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">⏳ 대기중</span>'}
                   </td>
                 </tr>
-              `).join('')}
+              `}).join('')}
             </tbody>
           </table>
         </div>
@@ -1307,16 +1491,70 @@ function renderStep7(data) {
   `;
 }
 
+// PRD v2 STEP 8: 비교 분석 (2개 하위 섹션 분리)
 function renderStep8(data) {
   const content = document.getElementById('content');
   const summary = data.summary;
+  
+  // 자재별 변동 현황 데이터 생성
+  const scheduleChanges = data.data.filter(item => 
+    item['2547주입고예정일'] || item['2548주입고예정일'] || item['2549주입고예정일']
+  ).map(item => {
+    const first = item['2547주입고예정일'];
+    const second = item['2548주입고예정일'];
+    const third = item['2549주입고예정일'];
+    
+    let trend = '➡️ 변동없음';
+    let daysDiff = 0;
+    
+    if (first && third) {
+      const firstDate = new Date(first);
+      const thirdDate = new Date(third);
+      daysDiff = Math.floor((thirdDate - firstDate) / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff > 0) trend = `📈 +${daysDiff}일 지연`;
+      else if (daysDiff < 0) trend = `📉 ${daysDiff}일 단축`;
+    } else if (first && second && !third) {
+      const firstDate = new Date(first);
+      const secondDate = new Date(second);
+      daysDiff = Math.floor((secondDate - firstDate) / (1000 * 60 * 60 * 24));
+      if (daysDiff > 0) trend = `📈 +${daysDiff}일 지연`;
+      else if (daysDiff < 0) trend = `📉 ${daysDiff}일 단축`;
+    }
+    
+    return { ...item, trend, daysDiff };
+  });
+  
+  const delayedCount = scheduleChanges.filter(i => i.daysDiff > 0).length;
+  const shortenedCount = scheduleChanges.filter(i => i.daysDiff < 0).length;
+  const unchangedCount = scheduleChanges.filter(i => i.daysDiff === 0).length;
+  
+  // 적정성 판단 데이터 (3차 납기예정일 vs 보급요청일)
+  const appropriatenessData = data.data.filter(item => 
+    item['2549주입고예정일'] && item['보급요청일']
+  ).map(item => {
+    const thirdDate = new Date(item['2549주입고예정일']);
+    const supplyDate = new Date(item['보급요청일']);
+    const daysDiff = Math.floor((supplyDate - thirdDate) / (1000 * 60 * 60 * 24));
+    
+    let status = 'normal';
+    if (daysDiff < 0) status = 'danger';
+    else if (daysDiff <= 2) status = 'warning';
+    
+    return { ...item, daysDiff, status };
+  });
+  
+  const goodCount = appropriatenessData.filter(i => i.status === 'normal').length;
+  const cautionCount = appropriatenessData.filter(i => i.status === 'warning').length;
+  const delayCount = appropriatenessData.filter(i => i.status === 'danger').length;
+  const totalAppropriateness = appropriatenessData.length || 1;
   
   content.innerHTML = `
     <div class="space-y-6">
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold text-gray-800">
           <i class="fas fa-chart-line mr-2 text-purple-500"></i>
-          STEP 8: 납기 비교 분석
+          STEP ⑧ 비교 분석
         </h2>
       </div>
       
@@ -1343,14 +1581,152 @@ function renderStep8(data) {
         </div>
       </div>
       
-      ${data.riskItems.length > 0 ? `
+      <!-- 5.1 자재별 협력사 납기 예정일 변동 현황 -->
+      <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div class="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+          <h3 class="font-semibold text-gray-700 flex items-center">
+            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-2">5.1</span>
+            <i class="fas fa-chart-area mr-2 text-blue-500"></i>
+            자재별 협력사 납기 예정일 변동 현황
+          </h3>
+          <p class="text-sm text-gray-500 mt-1">협력사 회신 (1차→2차→3차) 일정 변동 추이</p>
+        </div>
+        <div class="p-4">
+          <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="text-center p-3 bg-red-50 rounded-lg">
+              <p class="text-red-600 text-sm">📈 지연</p>
+              <p class="text-2xl font-bold text-red-700">${delayedCount}건</p>
+            </div>
+            <div class="text-center p-3 bg-green-50 rounded-lg">
+              <p class="text-green-600 text-sm">📉 단축</p>
+              <p class="text-2xl font-bold text-green-700">${shortenedCount}건</p>
+            </div>
+            <div class="text-center p-3 bg-gray-50 rounded-lg">
+              <p class="text-gray-600 text-sm">➡️ 변동없음</p>
+              <p class="text-2xl font-bold text-gray-700">${unchangedCount}건</p>
+            </div>
+          </div>
+          
+          <div class="overflow-x-auto max-h-64 scrollbar-thin">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-100 sticky top-0">
+                <tr>
+                  <th class="px-3 py-2 text-left font-medium text-gray-600">자재번호</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-600">1차(2547)</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-600">2차(2548)</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-600">3차(2549)</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-600">변동 추이</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${scheduleChanges.slice(0, 10).map(item => `
+                  <tr class="border-b hover:bg-blue-50">
+                    <td class="px-3 py-2 font-mono text-xs">${item['자재번호']}</td>
+                    <td class="px-3 py-2">${formatDate(item['2547주입고예정일'])}</td>
+                    <td class="px-3 py-2">${formatDate(item['2548주입고예정일'])}</td>
+                    <td class="px-3 py-2">${formatDate(item['2549주입고예정일'])}</td>
+                    <td class="px-3 py-2 ${item.daysDiff > 0 ? 'text-red-600' : item.daysDiff < 0 ? 'text-green-600' : 'text-gray-600'} font-medium">
+                      ${item.trend}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          <p class="text-sm text-gray-500 mt-3 text-center">
+            요약: 총 ${summary.totalItems}건 중 일정 변동 ${scheduleChanges.length}건 (${Math.round(scheduleChanges.length / summary.totalItems * 100)}%)
+          </p>
+        </div>
+      </div>
+      
+      <!-- 5.2 납기 적정성 판단 (협력사 납기예정일 vs 보급요청일) -->
+      <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div class="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-b">
+          <h3 class="font-semibold text-gray-700 flex items-center">
+            <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs mr-2">5.2</span>
+            <i class="fas fa-balance-scale mr-2 text-purple-500"></i>
+            납기 적정성 판단 (3차 납기예정일 vs 보급요청일)
+          </h3>
+        </div>
+        <div class="p-4">
+          <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <p class="font-medium text-gray-700 mb-2">📋 판단 기준</p>
+            <div class="grid grid-cols-3 gap-3 text-sm">
+              <div class="bg-green-100 rounded p-2 text-center">
+                <span class="text-green-700 font-bold">🟢 양호</span>
+                <p class="text-xs text-green-600 mt-1">3차 예정일이 보급요청일보다 2일 이상 빠름</p>
+              </div>
+              <div class="bg-yellow-100 rounded p-2 text-center">
+                <span class="text-yellow-700 font-bold">🟡 주의</span>
+                <p class="text-xs text-yellow-600 mt-1">3차 예정일이 보급요청일과 같거나 2일 이내 빠름</p>
+              </div>
+              <div class="bg-red-100 rounded p-2 text-center">
+                <span class="text-red-700 font-bold">🔴 지연</span>
+                <p class="text-xs text-red-600 mt-1">3차 예정일이 보급요청일보다 느림</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 적정성 분포 차트 -->
+          <div class="bg-white border rounded-lg p-4 mb-4">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-medium text-gray-700">분석 결과 분포</span>
+            </div>
+            <div class="flex h-8 rounded-full overflow-hidden">
+              <div class="bg-green-500 flex items-center justify-center text-white text-xs font-bold" style="width: ${goodCount/totalAppropriateness*100}%">
+                ${goodCount}건
+              </div>
+              <div class="bg-yellow-500 flex items-center justify-center text-white text-xs font-bold" style="width: ${cautionCount/totalAppropriateness*100}%">
+                ${cautionCount}건
+              </div>
+              <div class="bg-red-500 flex items-center justify-center text-white text-xs font-bold" style="width: ${delayCount/totalAppropriateness*100}%">
+                ${delayCount}건
+              </div>
+            </div>
+            <div class="flex justify-between text-xs mt-2 text-gray-500">
+              <span>🟢 양호 ${goodCount}건 (${Math.round(goodCount/totalAppropriateness*100)}%)</span>
+              <span>🟡 주의 ${cautionCount}건 (${Math.round(cautionCount/totalAppropriateness*100)}%)</span>
+              <span>🔴 지연 ${delayCount}건 (${Math.round(delayCount/totalAppropriateness*100)}%)</span>
+            </div>
+          </div>
+          
+          <div class="overflow-x-auto max-h-64 scrollbar-thin">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-100 sticky top-0">
+                <tr>
+                  <th class="px-3 py-2 text-left font-medium text-gray-600">자재번호</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-600">3차예정일</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-600">보급요청일</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-600">차이</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-600">상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${appropriatenessData.sort((a, b) => a.daysDiff - b.daysDiff).slice(0, 10).map(item => `
+                  <tr class="border-b hover:bg-blue-50">
+                    <td class="px-3 py-2 font-mono text-xs">${item['자재번호']}</td>
+                    <td class="px-3 py-2">${formatDate(item['2549주입고예정일'])}</td>
+                    <td class="px-3 py-2">${formatDate(item['보급요청일'])}</td>
+                    <td class="px-3 py-2 ${item.daysDiff < 0 ? 'text-red-600 font-bold' : item.daysDiff <= 2 ? 'text-yellow-600' : 'text-green-600'}">
+                      ${item.daysDiff > 0 ? '+' : ''}${item.daysDiff}일
+                    </td>
+                    <td class="px-3 py-2">${getStatusBadge(item.status)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      ${data.riskItems && data.riskItems.length > 0 ? `
       <div class="bg-red-50 border border-red-200 rounded-xl p-5">
         <h3 class="font-semibold text-red-700 mb-4 flex items-center">
           <i class="fas fa-exclamation-triangle mr-2"></i>
-          위험 항목 알림 (${data.riskItems.length}건)
+          🚨 위험 항목 알림 (${data.riskItems.length}건)
         </h3>
         <div class="space-y-3 max-h-64 overflow-y-auto">
-          ${data.riskItems.map(item => `
+          ${data.riskItems.slice(0, 5).map(item => `
             <div class="bg-white rounded-lg p-4 border ${item.riskLevel === 'critical' ? 'border-red-300' : 'border-orange-300'}">
               <div class="flex justify-between items-start">
                 <div>
@@ -1361,7 +1737,7 @@ function renderStep8(data) {
                     </span>
                   </div>
                   <p class="text-sm text-gray-600 mt-1">${item['자재내역']}</p>
-                  <p class="text-sm text-gray-500">공급사: ${item['발주업체명']}</p>
+                  <p class="text-sm text-gray-500">협력사: ${item['발주업체명']}</p>
                 </div>
                 <div class="text-right">
                   <p class="text-xs text-gray-500">호선: ${item['호선']}</p>
@@ -1377,16 +1753,6 @@ function renderStep8(data) {
       </div>
       ` : ''}
       
-      <div class="bg-white rounded-xl shadow-sm border p-5">
-        <h3 class="font-semibold text-gray-700 mb-4">
-          <i class="fas fa-chart-bar mr-2 text-purple-500"></i>
-          납기 현황 분포
-        </h3>
-        <div class="h-64">
-          <canvas id="chart-step8"></canvas>
-        </div>
-      </div>
-      
       <div class="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
         <i class="fas fa-check-circle text-5xl text-green-500 mb-4"></i>
         <p class="text-xl font-bold text-green-700">모든 프로세스 분석 완료</p>
@@ -1394,34 +1760,6 @@ function renderStep8(data) {
       </div>
     </div>
   `;
-  
-  setTimeout(() => {
-    const ctx = document.getElementById('chart-step8');
-    if (ctx) {
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['정상', '지연', '주의', '결품'],
-          datasets: [{
-            label: '건수',
-            data: [
-              summary.totalItems - summary.delayed - summary.caution - summary.shortage,
-              summary.delayed,
-              summary.caution,
-              summary.shortage
-            ],
-            backgroundColor: ['#22c55e', '#ef4444', '#f59e0b', '#8b5cf6']
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true } }
-        }
-      });
-    }
-  }, 100);
 }
 
 // Filter functions
@@ -1450,6 +1788,14 @@ function filterByStatus(stepIndex, status) {
   }
 }
 
+function toggleEmailPreview() {
+  showToast('info', '메일 미리보기', '전체 메일 내용은 발송 전 확인 가능합니다.');
+}
+
+function showEmailDetail(supplier) {
+  showToast('info', `${supplier} 메일 확인`, '발송된 메일 내용을 확인합니다.');
+}
+
 // Main render function
 function render() {
   const app = document.getElementById('app');
@@ -1465,7 +1811,7 @@ function render() {
               </div>
               <div>
                 <h1 class="text-xl font-bold">한화오션 SCM 납기관리 AI Agent</h1>
-                <p class="text-blue-200 text-sm">상선 SCM팀 납기 관리 자동화 시스템</p>
+                <p class="text-blue-200 text-sm">상선 SCM팀 납기 관리 자동화 시스템 v2.0</p>
               </div>
             </div>
             <div class="flex items-center gap-4">
@@ -1510,7 +1856,7 @@ function render() {
       <!-- Footer -->
       <footer class="bg-gray-100 border-t mt-8">
         <div class="max-w-7xl mx-auto px-4 py-4 text-center text-sm text-gray-500">
-          <p>한화오션 SCM 납기관리 AI Agent &copy; 2025 | Demo Version 1.0</p>
+          <p>한화오션 SCM 납기관리 AI Agent &copy; 2025 | Demo Version 2.0 (PRD v2)</p>
         </div>
       </footer>
     </div>

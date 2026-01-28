@@ -203,29 +203,33 @@ app.get('/api/step6/email-status', (c) => {
   })
 })
 
-// Step 7: 회신 수집
+// Step 7: 회신 수집 - PRD v2: 협력사 수 기준 제출률
 app.get('/api/step7/response-collection', (c) => {
   const suppliers = [...new Set(poData.map(item => item.발주업체명))]
+  
+  // PRD v2 예시: 7개 협력사 중 5개 회신 완료 = 71%
+  // 데모용으로 앞의 5개 협력사만 제출 완료로 설정
+  const submittedCount = Math.min(5, suppliers.length) // 5개 협력사 제출
   
   const responseStatus = suppliers.map((supplier, index) => ({
     supplier,
     itemCount: poData.filter(item => item.발주업체명 === supplier).length,
-    submitted: index < 17,
-    submittedAt: index < 17 ? '2025-01-28 14:00:00' : null,
-    reminderSent: index >= 17 && index < 22
+    submitted: index < submittedCount,
+    submittedAt: index < submittedCount ? ['2025-01-28 09:00:00', '2025-01-28 14:30:00', '2025-01-28 10:15:00', '2025-01-29 09:45:00', '2025-01-30 11:00:00'][index % 5] : null,
+    reminderSent: index >= submittedCount
   }))
   
-  const submissionRate = Math.round((17 / suppliers.length) * 100)
+  const submissionRate = Math.round((submittedCount / suppliers.length) * 100)
   
   return c.json({
     data: responseStatus,
     summary: {
       totalSuppliers: suppliers.length,
-      submitted: 17,
-      notSubmitted: suppliers.length - 17,
+      submitted: submittedCount,
+      notSubmitted: suppliers.length - submittedCount,
       submissionRate
     },
-    pendingReminders: responseStatus.filter(r => !r.submitted && !r.reminderSent)
+    pendingReminders: responseStatus.filter(r => !r.submitted)
   })
 })
 
@@ -266,7 +270,7 @@ app.get('/api/step8/comparison-analysis', (c) => {
   })
 })
 
-// Alerts API
+// Alerts API - PRD v2 프로세스명 연동
 app.get('/api/alerts', (c) => {
   const alerts = [
     {
@@ -275,7 +279,7 @@ app.get('/api/alerts', (c) => {
       icon: '🔴',
       title: '납기 지연 위험',
       description: '2579AVGTKWCG1030 외 4건',
-      detail: '계약납기 초과 예상',
+      detail: 'STEP ② 계약 납기일 검증 - 계약납기 초과 예상',
       time: '방금 전',
       isNew: true,
       items: poData.filter(item => item.지연구분 === '지연').slice(0, 5)
@@ -286,7 +290,7 @@ app.get('/api/alerts', (c) => {
       icon: '⚠️',
       title: 'PND 변경 감지',
       description: '2582AVEJBUBA2310',
-      detail: '17일 앞당겨짐',
+      detail: 'STEP ③ PND 변경 사항 검토 - 17일 앞당겨짐',
       time: '5분 전',
       isNew: true,
       items: poData.filter(item => item['변경된 PND']).slice(0, 3)
@@ -297,7 +301,7 @@ app.get('/api/alerts', (c) => {
       icon: '📦',
       title: '긴급 보급 요청',
       description: '호선 2583 - 생산1팀 김철수',
-      detail: '즉시 처리 필요',
+      detail: 'STEP ④ 보급 요청일 검토 - 즉시 처리 필요',
       time: '10분 전',
       isNew: true,
       items: poData.filter(item => (item.비고 as string | null)?.includes('긴급')).slice(0, 3)
@@ -307,8 +311,8 @@ app.get('/api/alerts', (c) => {
       type: 'info',
       icon: '📧',
       title: '회신 미제출 알림',
-      description: 'KSB S.A.S 외 2개 공급사',
-      detail: '기한 D-1',
+      description: 'SNRI SCHUF, FUJI TRADING CO. 외 2개 협력사',
+      detail: 'STEP ⑦ 납기 예정일 회신 수집 - 기한 D-1',
       time: '1시간 전',
       isNew: false,
       items: []
@@ -319,10 +323,21 @@ app.get('/api/alerts', (c) => {
       icon: '📈',
       title: '납기 변동 경고',
       description: '2539AVRHAWCG4150-M',
-      detail: '3차 연속 지연',
+      detail: 'STEP ⑧ 비교 분석 - 3차 연속 지연',
       time: '2시간 전',
       isNew: false,
       items: poData.filter(item => item['2549주입고예정일']).slice(0, 2)
+    },
+    {
+      id: 6,
+      type: 'danger',
+      icon: '🔴',
+      title: '납기 지연 예상',
+      description: '3차 납기예정일 > 보급요청일',
+      detail: 'STEP ⑧ 비교 분석 - 5.2 적정성 판단 위험',
+      time: '3시간 전',
+      isNew: false,
+      items: poData.filter(item => item['2549주입고예정일'] && item['보급요청일']).slice(0, 2)
     }
   ]
   

@@ -17,12 +17,12 @@ const state = {
 
 // Step definitions - PRD v2 프로세스명 변경
 const steps = [
-  { id: 1, name: '납기관리 Tracking 포맷 생성', shortName: 'Tracking 포맷', icon: 'fa-file-excel', api: '/api/step1/po-extract' },
-  { id: 2, name: '계약 납기일 검증', shortName: '납기 검증', icon: 'fa-check-circle', api: '/api/step2/delivery-validation' },
-  { id: 3, name: 'PND 변경 사항 검토', shortName: 'PND 변경', icon: 'fa-calendar-alt', api: '/api/step3/pnd-changes' },
-  { id: 4, name: '보급 요청일 검토', shortName: '보급 요청', icon: 'fa-box', api: '/api/step4/supply-requests' },
+  { id: 1, name: '납기관리 Tracking 포맷 생성', shortName: 'Tracking 포맷 생성', icon: 'fa-file-excel', api: '/api/step1/po-extract' },
+  { id: 2, name: '계약 납기일 검증', shortName: '계약 납기일 검증', icon: 'fa-check-circle', api: '/api/step2/delivery-validation' },
+  { id: 3, name: 'PND 변경 사항 검토', shortName: 'PND 변경 검토', icon: 'fa-calendar-alt', api: '/api/step3/pnd-changes' },
+  { id: 4, name: '보급 요청일 검토', shortName: '보급 요청일 검토', icon: 'fa-box', api: '/api/step4/supply-requests' },
   { id: 5, name: '납기 예정일 적정성 판단', shortName: '적정성 판단', icon: 'fa-chart-pie', api: '/api/step5/appropriateness' },
-  { id: 6, name: '주단위 협력사 납기 예정일 업데이트 요청', shortName: '메일 발송', icon: 'fa-envelope', api: '/api/step6/email-status' },
+  { id: 6, name: '주단위 협력사 납기 예정일 업데이트 요청', shortName: '납기 업데이트 요청', icon: 'fa-envelope', api: '/api/step6/email-status' },
   { id: 7, name: '납기 예정일 회신 수집', shortName: '회신 수집', icon: 'fa-inbox', api: '/api/step7/response-collection' },
   { id: 8, name: '비교 분석', shortName: '비교 분석', icon: 'fa-chart-line', api: '/api/step8/comparison-analysis' }
 ];

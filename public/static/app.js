@@ -503,8 +503,8 @@ function renderStep1(data) {
   const content = document.getElementById('content');
   const summary = data.summary;
   
-  // 원본 엑셀 컬럼 순서 유지
-  const excelColumns = ['구분', '발주업체명', '호선', '구매오더', '구매항목', '자재번호', '자재내역', 'LEAD TIME', '발주일', 'PND', '변경된 PND', 'PND 변경', '계약납기일', '보급요청신청일', '보급요청일', '자재구분'];
+  // 전체 엑셀 컬럼
+  const excelColumns = ['구분', '발주업체명', '호선', '구매오더', '구매항목', '자재번호', '자재내역', 'LEAD TIME', '발주일', 'PND', '변경된 PND', 'PND 변경', '계약납기일', '보급요청신청일', '보급요청일', '자재구분', 'Block', 'Stage', '작업업체', '상세자재PND', '작업부서명', '요청자명', '연락처', '발주구매그룹명', '2547주입고예정일', '진행현황', '2548주입고예정일', '진행현황2', '2549주입고예정일', '진행현황3', '비고', '지연구분', '결품구분', '원소재', '가공', '조립', '도장', '검사'];
   
   content.innerHTML = `
     <div class="space-y-6">
@@ -523,15 +523,7 @@ function renderStep1(data) {
         </div>
       </div>
       
-      <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-        <div class="flex items-start gap-3">
-          <i class="fas fa-info-circle text-yellow-500 mt-1"></i>
-          <div>
-            <p class="font-medium text-yellow-800">📋 원본 엑셀 포맷 유지</p>
-            <p class="text-sm text-yellow-700 mt-1">추출된 데이터는 원본 엑셀 컬럼 순서와 컬럼명을 그대로 유지합니다.</p>
-          </div>
-        </div>
-      </div>
+
       
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
@@ -613,7 +605,7 @@ function renderStep1(data) {
         <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
           <h3 class="font-semibold text-gray-700">
             <i class="fas fa-table mr-2 text-green-500"></i>
-            Tracking 포맷 데이터 (${data.data.length}건) - 원본 컬럼 순서 유지
+            Tracking 포맷 데이터 (${data.data.length}건)
           </h3>
           <input type="text" id="search-step1" placeholder="검색..." class="px-3 py-1.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" onkeyup="filterTable(1)">
         </div>
@@ -630,21 +622,43 @@ function renderStep1(data) {
                   <td class="px-3 py-2">
                     <span class="px-2 py-1 ${row['구분'] === '대형' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'} rounded text-xs">${row['구분']}</span>
                   </td>
-                  <td class="px-3 py-2 font-medium">${row['발주업체명']}</td>
+                  <td class="px-3 py-2 font-medium whitespace-nowrap">${row['발주업체명']}</td>
                   <td class="px-3 py-2">${row['호선']}</td>
                   <td class="px-3 py-2 font-mono text-xs">${row['구매오더']}</td>
                   <td class="px-3 py-2">${row['구매항목']}</td>
                   <td class="px-3 py-2 font-mono text-xs">${row['자재번호']}</td>
                   <td class="px-3 py-2 max-w-xs truncate" title="${row['자재내역']}">${row['자재내역']}</td>
                   <td class="px-3 py-2">${row['LEAD TIME']}일</td>
-                  <td class="px-3 py-2">${formatDate(row['발주일'])}</td>
-                  <td class="px-3 py-2">${formatDate(row['PND'])}</td>
-                  <td class="px-3 py-2">${formatDate(row['변경된 PND'])}</td>
-                  <td class="px-3 py-2">${formatDate(row['PND 변경'])}</td>
-                  <td class="px-3 py-2">${formatDate(row['계약납기일'])}</td>
-                  <td class="px-3 py-2">${formatDate(row['보급요청신청일'])}</td>
-                  <td class="px-3 py-2">${formatDate(row['보급요청일'])}</td>
-                  <td class="px-3 py-2">${row['자재구분'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${formatDate(row['발주일'])}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${formatDate(row['PND'])}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${formatDate(row['변경된 PND'])}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${formatDate(row['PND 변경'])}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${formatDate(row['계약납기일'])}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${formatDate(row['보급요청신청일'])}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${formatDate(row['보급요청일'])}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['자재구분'] || '-'}</td>
+                  <td class="px-3 py-2">${row['Block'] || '-'}</td>
+                  <td class="px-3 py-2">${row['Stage'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['작업업체'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${formatDate(row['상세자재PND'])}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['작업부서명'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['요청자명'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['연락처'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['발주구매그룹명'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${formatDate(row['2547주입고예정일'])}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['진행현황'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${formatDate(row['2548주입고예정일'])}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['진행현황2'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${formatDate(row['2549주입고예정일'])}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['진행현황3'] || '-'}</td>
+                  <td class="px-3 py-2">${row['비고'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['지연구분'] ? `<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">${row['지연구분']}</span>` : '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['결품구분'] ? `<span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">${row['결품구분']}</span>` : '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['원소재'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['가공'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['조립'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['도장'] || '-'}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">${row['검사'] || '-'}</td>
                 </tr>
               `).join('')}
             </tbody>
